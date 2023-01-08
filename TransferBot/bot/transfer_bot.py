@@ -1,5 +1,5 @@
+import asyncio
 import logging
-import queue
 import typing as tp
 from io import BytesIO
 from logging import getLogger
@@ -24,7 +24,7 @@ class TransferBot:
         self.dispatcher = Dispatcher(self.bot)
         self._setup_handlers()
 
-        self.queue = queue.Queue()
+        self.queue = list()  # queue.Queue()
 
     def _setup_handlers(self):
         self.dispatcher.register_message_handler(self.send_welcome, commands=["start", "help"])
@@ -37,31 +37,48 @@ class TransferBot:
         LOGGER.info(f"Sending welcome message to {message.chat.id}.")
         await message.reply(welcome_message.format(message=message), parse_mode='MarkdownV2')
 
-    async def styly(self, image):
-        m = self.model()
-        image = m.process_image(image)
-        return image
-
     async def process_photo(self, message: types.Message):
-        # await self.queue.put(1)
-        reply_message = await message.reply(f"Ваше фото обрабатывается (место в очереди - {self.queue.qsize()}).")
+
+        msg_hash = hash(message)
+        self.queue.append(msg_hash)
+        pos = self.queue.index(msg_hash) + 1
+        reply_message = await message.reply(f"Ваше фото обрабатывается (место в очереди - {pos}).")
+        current_position = pos
 
         file_obj = await self.bot.get_file(message.photo[-1].file_id)
         temp_file = BytesIO()
         await file_obj.download(temp_file)
-        temp_file = await self.styly(temp_file)
 
-        # self.queue.get()
+        while True:
+            LOGGER.info("цикл")
+            new_current_position = self.queue.index(msg_hash) + 1
+            if new_current_position != current_position:
+                current_position = new_current_position
+                reply_message = await reply_message.edit_text(f"Ваше фото {current_position} в очереди.")
+            else:
+                await asyncio.sleep(1)
+
+            if current_position <= 2:
+                reply_message = await reply_message.edit_text(f"Ваше фото обрабатывается.")
+                break
+
+        temp_file = await self.model.process_image(temp_file)
+
+        await self.bot.delete_message(message.chat.id, reply_message.message_id)
         await self.bot.send_photo(
             chat_id=message.chat.id,
             photo=InputFile(temp_file),
-            caption="Результат!"
+            caption="Результат переноса стиля!",
+            reply_to_message_id=message.message_id,
         )
+
+        self.queue.remove(msg_hash)
+        LOGGER.info(str(self.queue))
 
 
 if __name__ == '__main__':
     bot = TransferBot(
-        "TOKEN",
-        model=VGGTransfer,
+        "",
+        model=VGGTransfer(),
     )
     bot.run()

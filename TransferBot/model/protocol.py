@@ -4,10 +4,10 @@ from typing import Protocol
 
 
 class ModelABC(Protocol):
-    def process_image(self, img: BytesIO) -> BytesIO:
+    async def process_image(self, img: BytesIO) -> BytesIO:
         pass
 
 
 class MockModel(ModelABC):
-    def process_image(self, img: BytesIO) -> BytesIO:
+    async def process_image(self, img: BytesIO) -> BytesIO:
         return img
