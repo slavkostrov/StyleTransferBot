@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import typing as tp
+from dataclasses import dataclass, field
 from io import BytesIO
 from logging import getLogger
 
@@ -16,69 +17,105 @@ LOGGER = getLogger(__file__)
 LOGGER.setLevel(logging.INFO)
 
 
-class TransferBot:
+@dataclass
+class RequestsQueue:
+    """Очередь запросов на обработку фотографий."""
+    _list: tp.List[int] = field(default_factory=list, repr=False)
 
-    def __init__(self, bot_token: str, model: tp.Optional[ModelABC] = None):
+    def put(self, message: types.Message):
+        request_id = hash(message)
+        self._list.append(request_id)
+
+    def remove(self, message: types.Message):
+        request_id = hash(message)
+        if request_id in self._list:
+            self._list.remove(request_id)
+
+    def get_position(self, message: types.Message) -> int:
+        request_id = hash(message)
+        return self._list.index(request_id) + 1
+
+
+class TransferBot:
+    """Класс бота для переноса стиля."""
+
+    def __init__(self, bot_token: str, model: ModelABC, max_tasks: int = 2):
+        """
+        Конструктор бота для переноса стиля.
+
+        :param bot_token: Telegram токен бота.
+        :param model: инстанс моделя для переноса стиля.
+        :param max_tasks: максимальное количество асинхронных задач переноса.
+        """
         self.model = model
         self.bot = Bot(token=bot_token)
+        self.max_tasks = max_tasks
         self.dispatcher = Dispatcher(self.bot)
         self._setup_handlers()
 
-        self.queue = list()  # queue.Queue()
+        self.queue = RequestsQueue()
 
     def _setup_handlers(self):
+        """Выполняет установку всех обработчиков."""
         self.dispatcher.register_message_handler(self.send_welcome, commands=["start", "help"])
         self.dispatcher.register_message_handler(self.process_photo, content_types=["photo"])
 
     def run(self):
+        """Запускает бота."""
         executor.start_polling(self.dispatcher, skip_updates=True)
 
-    async def send_welcome(self, message: types.Message):
+    @staticmethod
+    async def send_welcome(message: types.Message):
+        """Отсправляет приветственное сообщение."""
         LOGGER.info(f"Sending welcome message to {message.chat.id}.")
         await message.reply(welcome_message.format(message=message), parse_mode='MarkdownV2')
 
     async def process_photo(self, message: types.Message):
+        """Реализует логику по обработке фотографий."""
+        reply_message = await self._wait_in_queue(message)
+        input_image = await self.download_image(message)
+        transformed_image = await self.model.process_image(input_image)
+        await self.bot.delete_message(message.chat.id, reply_message.message_id)
+        await self.bot.send_photo(
+            chat_id=message.chat.id,
+            photo=InputFile(transformed_image),
+            caption="Результат переноса стиля!",
+            reply_to_message_id=message.message_id,
+        )
+        self.queue.remove(message)
 
-        msg_hash = hash(message)
-        self.queue.append(msg_hash)
-        pos = self.queue.index(msg_hash) + 1
-        reply_message = await message.reply(f"Ваше фото обрабатывается (место в очереди - {pos}).")
-        current_position = pos
-
-        file_obj = await self.bot.get_file(message.photo[-1].file_id)
-        temp_file = BytesIO()
-        await file_obj.download(temp_file)
+    async def _wait_in_queue(self, message: types.Message):
+        """Реализует ожидание в очереди на обработку фотографий."""
+        self.queue.put(message)
+        current_position = self.queue.get_position(message)
+        reply_message = await message.reply(f"Ваше фото {current_position} в очереди.")
 
         while True:
-            LOGGER.info("цикл")
-            new_current_position = self.queue.index(msg_hash) + 1
-            if new_current_position != current_position:
-                current_position = new_current_position
+            position = self.queue.get_position(message)
+            if position != current_position:
+                current_position = position
                 reply_message = await reply_message.edit_text(f"Ваше фото {current_position} в очереди.")
             else:
                 await asyncio.sleep(1)
 
-            if current_position <= 2:
+            if current_position <= self.max_tasks:
                 reply_message = await reply_message.edit_text(f"Ваше фото обрабатывается.")
                 break
 
-        temp_file = await self.model.process_image(temp_file)
+        return reply_message
 
-        await self.bot.delete_message(message.chat.id, reply_message.message_id)
-        await self.bot.send_photo(
-            chat_id=message.chat.id,
-            photo=InputFile(temp_file),
-            caption="Результат переноса стиля!",
-            reply_to_message_id=message.message_id,
-        )
-
-        self.queue.remove(msg_hash)
-        LOGGER.info(str(self.queue))
+    async def download_image(self, message: types.Message):
+        """Скачивает картинку в BytesIO."""
+        file_obj = await self.bot.get_file(message.photo[-1].file_id)
+        byte_stream = BytesIO()
+        await file_obj.download(byte_stream)
+        return byte_stream
 
 
 if __name__ == '__main__':
+    from secret import TOKEN
     bot = TransferBot(
-        "",
+        TOKEN,
         model=VGGTransfer(),
     )
     bot.run()
