@@ -1,16 +1,15 @@
 import asyncio
-import dataclasses
-import io
 import sys
 import typing as tp
-from collections import namedtuple
+from dataclasses import dataclass, field
 from io import BytesIO
 from logging import getLogger
-from pathlib import Path
 
+import requests
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from PIL import Image
 from torchvision import models
 from torchvision import transforms
 
@@ -53,20 +52,27 @@ class Vgg16(torch.nn.Module):
         return out
 
 
-@dataclasses.dataclass
+@dataclass
 class VGGTransfer(ModelABC):
-    style_img_path: tp.Union[str, Path] = "C:\\Users\\Xiaomi\\Documents\\dls_project_2022_23\\TransferBot\\model\\style\\s.jpg" # TODO: will be deprecated since we'll start to use pretrained models
+    epochs: int = field(default=150)
+    default_image_size: int = field(default=256)
+    max_image_size: int = field(default=512)
 
-    epochs: int = dataclasses.field(default=150)
-    image_size: int = dataclasses.field(default=128)
-    batch_size: int = dataclasses.field(default=1)
-    learning_rate: float = dataclasses.field(default=0.01)
-    content_weight: float = dataclasses.field(default=1.)
-    style_weight: float = dataclasses.field(default=1e9)
-    tv_weight: float = dataclasses.field(default=2.)
+    batch_size: int = field(default=1)
+    learning_rate: float = field(default=0.01)
+    content_weight: float = field(default=1.)
+    style_weight: float = field(default=1e9)
+    tv_weight: float = field(default=2.)
 
-    device: str = dataclasses.field(default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu")
-    vgg: torch.nn.Module = dataclasses.field(default_factory=lambda: Vgg16())
+    device: str = field(default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu")
+    vgg: torch.nn.Module = field(default_factory=lambda: Vgg16())
+
+    @property
+    def image_size(self):
+        size = self.default_image_size
+        if isinstance(size, int):
+            size = (size, size)
+        return size
 
     def __post_init__(self):
         self.transforms = transforms.Compose([
@@ -82,30 +88,42 @@ class VGGTransfer(ModelABC):
         self.vgg = self.vgg.to(self.device)
         LOGGER.info(f"Model: {self}")
 
-    @staticmethod
-    async def load_image(filename, image_size, transform):
-        image = utils.load_image(filename=filename, size=image_size)
+    async def load_image(self, filename, size, transform):
+        img = Image.open(filename)
+        input_image_size = img.size
+        size_list = list(size)
+        for i, s in enumerate(size_list):
+            if s > self.max_image_size:
+                size_list[i] = self.max_image_size
+        size = tuple(size_list)
+        image = img.resize(size, Image.ANTIALIAS)
+        ssize = image.size
         image = transform(image)
         image = image.repeat(1, 1, 1, 1)
-        return image
+        return image, input_image_size, ssize
 
     async def get_features(self, img):
         img = img.to(self.device)
         return Vgg16().to(self.device)(img)
 
     @staticmethod
-    def get_bytes_image(tensor):
+    def get_bytes_image(tensor, size):
         final_image = utils.get_pil_image(tensor)
-        return_image = io.BytesIO()
+        final_image = final_image.resize(size, Image.ANTIALIAS)
+        return_image = BytesIO()
         final_image.save(return_image, "jpeg")
         return_image.seek(0)
         return return_image
 
-    async def process_image(self, content_image: BytesIO) -> BytesIO:
-        style_img, content_img = await asyncio.gather(
-            self.load_image(self.style_img_path, self.image_size, self.style_transform),
-            self.load_image(content_image, self.image_size, self.transforms)
-        )
+    async def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
+        if style_image is None:
+            response = requests.get(
+                "https://uploads4.wikiart.org/00142/images/vincent-van-gogh/the-starry-night.jpg!Large.jpg")
+            style_image = BytesIO(response.content)
+
+        content_img, content_size, result_size = await self.load_image(content_image, self.image_size, self.transforms)
+        style_img, _, _ = await self.load_image(style_image, result_size, self.style_transform)
+
         features_style, features_content = await asyncio.gather(
             self.get_features(style_img),
             self.get_features(content_img)
@@ -149,7 +167,7 @@ class VGGTransfer(ModelABC):
                         content_loss,
                         tv_loss,
                     )
-                )
+                    )
 
                 return total_loss
 
@@ -158,4 +176,4 @@ class VGGTransfer(ModelABC):
 
             optimizer.step(closure)
 
-        return self.get_bytes_image(y)
+        return self.get_bytes_image(y, content_size)

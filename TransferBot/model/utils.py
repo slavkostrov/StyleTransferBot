@@ -1,18 +1,11 @@
-import torch
-from PIL import Image
 import os
 
-
+import torch
+from PIL import Image
 from torchvision import transforms
 
 
-def load_image(filename, size=None, scale=None):
-    img = Image.open(filename)
-    if size is not None:
-        img = img.resize((size, size), Image.ANTIALIAS)
-    elif scale is not None:
-        img = img.resize((int(img.size[0] / scale), int(img.size[1] / scale)), Image.ANTIALIAS)
-    return img
+
 
 
 def gram_matrix(y):
@@ -21,6 +14,7 @@ def gram_matrix(y):
     features_t = features.transpose(1, 2)
     gram = features.bmm(features_t) / (ch * h * w)
     return gram
+
 
 def normalize_batch(batch):
     # normalize using imagenet mean and std
@@ -37,6 +31,7 @@ def get_pil_image(tensor):
     image = tensor.cpu().clone()
     image = image.squeeze(0)
     return unloader(image)
+
 
 def save_image_epoch(tensor, path, num):
     """Save a single image."""
