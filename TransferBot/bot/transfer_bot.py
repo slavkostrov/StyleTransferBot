@@ -1,20 +1,30 @@
 import asyncio
 import logging
+import multiprocessing
+import sys
 import typing as tp
 from dataclasses import dataclass, field
 from io import BytesIO
 from logging import getLogger
+from queue import Empty
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types.input_file import InputFile
 
-from TransferBot.model import ModelABC
 from TransferBot.model import VGGTransfer
+from TransferBot.model.protocol import ModelABC
 from bot_answers import welcome_message
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = getLogger(__file__)
 LOGGER.setLevel(logging.INFO)
+
+
+def process_func(queue: multiprocessing.Queue, model_class: type, image: BytesIO):
+    model = model_class()
+    result = model.process_image(image)
+    queue.put(result)
+    sys.exit(0)
 
 
 @dataclass
@@ -47,6 +57,9 @@ class TransferBot:
         :param model: инстанс моделя для переноса стиля.
         :param max_tasks: максимальное количество асинхронных задач переноса.
         """
+        if not isinstance(model, ModelABC):
+            raise RuntimeError("Not valid model.")
+
         self.model = model
         self.bot = Bot(token=bot_token)
         self.max_tasks = max_tasks
@@ -74,7 +87,26 @@ class TransferBot:
         """Реализует логику по обработке фотографий."""
         reply_message = await self._wait_in_queue(message)
         input_image = await self.download_image(message)
-        transformed_image = await self.model.process_image(input_image)
+
+        queue = multiprocessing.Queue()
+        process = multiprocessing.Process(target=process_func, args=(queue, self.model, input_image), )
+        process.start()
+
+        # TODO: add something like timeout
+        while True:
+            data = None
+            try:
+                data = queue.get_nowait()
+            except Empty:
+                pass
+            if data is not None:
+                LOGGER.info("got result from child process in processify")
+                transformed_image = data
+                break
+            if not process.is_alive():
+                raise Exception("process is dead")
+            await asyncio.sleep(1)
+
         await self.bot.delete_message(message.chat.id, reply_message.message_id)
         await self.bot.send_photo(
             chat_id=message.chat.id,
@@ -116,6 +148,6 @@ if __name__ == '__main__':
     from secret import TOKEN
     bot = TransferBot(
         TOKEN,
-        model=VGGTransfer(),
+        model=VGGTransfer,
     )
     bot.run()

@@ -1,4 +1,3 @@
-import asyncio
 import sys
 import typing as tp
 from dataclasses import dataclass, field
@@ -88,7 +87,7 @@ class VGGTransfer(ModelABC):
         self.vgg = self.vgg.to(self.device)
         LOGGER.info(f"Model: {self}")
 
-    async def load_image(self, filename, size, transform):
+    def load_image(self, filename, size, transform):
         img = Image.open(filename)
         input_image_size = img.size
         size_list = list(size)
@@ -102,7 +101,7 @@ class VGGTransfer(ModelABC):
         image = image.repeat(1, 1, 1, 1)
         return image, input_image_size, ssize
 
-    async def get_features(self, img):
+    def get_features(self, img):
         img = img.to(self.device)
         return Vgg16().to(self.device)(img)
 
@@ -115,19 +114,15 @@ class VGGTransfer(ModelABC):
         return_image.seek(0)
         return return_image
 
-    async def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
+    def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
         if style_image is None:
             response = requests.get(
                 "https://uploads4.wikiart.org/00142/images/vincent-van-gogh/the-starry-night.jpg!Large.jpg")
             style_image = BytesIO(response.content)
 
-        content_img, content_size, result_size = await self.load_image(content_image, self.image_size, self.transforms)
-        style_img, _, _ = await self.load_image(style_image, result_size, self.style_transform)
-
-        features_style, features_content = await asyncio.gather(
-            self.get_features(style_img),
-            self.get_features(content_img)
-        )
+        content_img, content_size, result_size = self.load_image(content_image, self.image_size, self.transforms)
+        style_img, _, _ = self.load_image(style_image, result_size, self.style_transform)
+        features_style, features_content = self.get_features(style_img), self.get_features(content_img)
 
         gram_style = [utils.gram_matrix(y) for y in features_style]
         mse_loss = nn.MSELoss()
@@ -170,9 +165,6 @@ class VGGTransfer(ModelABC):
                     )
 
                 return total_loss
-
-            if epoch % 10 == 0:
-                await asyncio.sleep(1)
 
             optimizer.step(closure)
 
