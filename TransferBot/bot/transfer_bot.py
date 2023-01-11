@@ -54,7 +54,7 @@ class TransferBot:
         Конструктор бота для переноса стиля.
 
         :param bot_token: Telegram токен бота.
-        :param model: инстанс моделя для переноса стиля.
+        :param model: класс модели для переноса стиля. # TODO: deprecate and let the user select it
         :param max_tasks: максимальное количество асинхронных задач переноса.
         """
         if not isinstance(model, ModelABC):
