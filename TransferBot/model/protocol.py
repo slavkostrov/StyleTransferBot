@@ -1,13 +1,14 @@
 """Модуль с описанием протокала для модели."""
 from io import BytesIO
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class ModelABC(Protocol):
-    async def process_image(self, img: BytesIO) -> BytesIO:
+    def process_image(self, img: BytesIO) -> BytesIO:
         pass
 
 
 class MockModel(ModelABC):
-    async def process_image(self, img: BytesIO) -> BytesIO:
+    def process_image(self, img: BytesIO) -> BytesIO:
         return img
