@@ -53,6 +53,8 @@ class Vgg16(torch.nn.Module):
 
 @dataclass
 class VGGTransfer(ModelABC):
+    model_id: str = "VGG16"
+
     epochs: int = field(default=150)
     default_image_size: int = field(default=256)
     max_image_size: int = field(default=512)
@@ -85,7 +87,7 @@ class VGGTransfer(ModelABC):
         ])
 
         self.vgg = self.vgg.to(self.device)
-        LOGGER.info(f"Model: {self}")
+        LOGGER.info("model is loaded.") # LOGGER.info(f"Model: {self}")
 
     def load_image(self, filename, size, transform):
         img = Image.open(filename)
@@ -161,7 +163,7 @@ class VGGTransfer(ModelABC):
                         style_loss,
                         content_loss,
                         tv_loss,
-                    )
+                        )
                     )
 
                 return total_loss

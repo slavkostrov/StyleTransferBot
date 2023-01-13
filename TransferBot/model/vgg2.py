@@ -197,6 +197,7 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 
 
 class VGG19Transfer(ModelABC):
+    model_id: str = "VGG19"
 
     def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
         if style_image is None:
