@@ -1,4 +1,3 @@
-import sys
 import typing as tp
 from dataclasses import dataclass, field
 from io import BytesIO
@@ -8,15 +7,13 @@ import requests
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from PIL import Image
 from torchvision import models
 from torchvision import transforms
 
-sys.path.append("C:\\Users\\Xiaomi\\Documents\\dls_project_2022_23\\TransferBot\\model\\")
-import utils
-from TransferBot.model import ModelABC
+from . import ModelABC
+from . import utils
 
-LOGGER = getLogger(__file__)
+LOGGER = getLogger("vgg16.py")
 
 
 class Vgg16(torch.nn.Module):
@@ -52,7 +49,7 @@ class Vgg16(torch.nn.Module):
 
 
 @dataclass
-class VGGTransfer(ModelABC):
+class VGG16Transfer(ModelABC):
     model_id: str = "VGG16"
 
     epochs: int = field(default=150)
@@ -87,44 +84,25 @@ class VGGTransfer(ModelABC):
         ])
 
         self.vgg = self.vgg.to(self.device)
-        LOGGER.info("model is loaded.") # LOGGER.info(f"Model: {self}")
-
-    def load_image(self, filename, size, transform):
-        img = Image.open(filename)
-        input_image_size = img.size
-        size_list = list(size)
-        for i, s in enumerate(size_list):
-            if s > self.max_image_size:
-                size_list[i] = self.max_image_size
-        size = tuple(size_list)
-        image = img.resize(size, Image.ANTIALIAS)
-        ssize = image.size
-        image = transform(image)
-        image = image.repeat(1, 1, 1, 1)
-        return image, input_image_size, ssize
+        LOGGER.info(f"model is loaded. using device {self.device}.")
 
     def get_features(self, img):
         img = img.to(self.device)
-        return Vgg16().to(self.device)(img)
-
-    @staticmethod
-    def get_bytes_image(tensor, size):
-        final_image = utils.get_pil_image(tensor)
-        final_image = final_image.resize(size, Image.ANTIALIAS)
-        return_image = BytesIO()
-        final_image.save(return_image, "jpeg")
-        return_image.seek(0)
-        return return_image
+        return self.vgg.to(self.device)(img)
 
     def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
         if style_image is None:
+            LOGGER.warning("Loading mock style image.")
             response = requests.get(
                 "https://uploads4.wikiart.org/00142/images/vincent-van-gogh/the-starry-night.jpg!Large.jpg")
             style_image = BytesIO(response.content)
 
+        LOGGER.debug("Loading input images.")
         content_img, content_size, result_size = self.load_image(content_image, self.image_size, self.transforms)
         style_img, _, _ = self.load_image(style_image, result_size, self.style_transform)
+        LOGGER.debug("Getting features from model.")
         features_style, features_content = self.get_features(style_img), self.get_features(content_img)
+        LOGGER.debug("Got features from model.")
 
         gram_style = [utils.gram_matrix(y) for y in features_style]
         mse_loss = nn.MSELoss()
@@ -163,7 +141,7 @@ class VGGTransfer(ModelABC):
                         style_loss,
                         content_loss,
                         tv_loss,
-                        )
+                    )
                     )
 
                 return total_loss
