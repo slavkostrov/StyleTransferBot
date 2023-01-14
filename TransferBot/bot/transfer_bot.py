@@ -52,7 +52,10 @@ class StyleAnswerFilter(Filter):
         return request is not None
 
 
-# TODO: rewrite it to state maybe
+# OPTIONAL: use aiogram states but it seems like some linear dialog
+# in this project dialog isn't linear,
+# i mean that use can select model for previous images (while processing current) etc
+# so far we use request with dumping backups.
 @dataclass
 class Request:
     """Класс запроса на перенос стиля."""
