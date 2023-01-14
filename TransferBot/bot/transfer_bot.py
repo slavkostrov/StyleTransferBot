@@ -7,9 +7,7 @@ import sys
 import typing as tp
 from dataclasses import dataclass, field
 from io import BytesIO
-from logging import getLogger, config
-
-config.fileConfig("C:\\Users\\Xiaomi\\Documents\\dls_project_2022_23\\logging.default.conf")
+from logging import getLogger
 from queue import Empty
 
 from aiogram import Bot, Dispatcher, executor, types
@@ -52,7 +50,10 @@ class StyleAnswerFilter(Filter):
         return request is not None
 
 
-# TODO: rewrite it to state maybe
+# OPTIONAL: use aiogram states but it seems like some linear dialog
+# in this project dialog isn't linear,
+# i mean that use can select model for previous images (while processing current) etc
+# so far we use request with dumping backups.
 @dataclass
 class Request:
     """Класс запроса на перенос стиля."""
@@ -154,6 +155,7 @@ class TransferBot:
         _, model_id, message_id = query.data.split(":")
         LOGGER.info(f"Got model selection for message_id={message_id} and {model_id}")
         request = Request.pop_from_cache(query.from_user.id, message_id)
+        # TODO: add check if not found
         request.model_id = model_id
 
         LOGGER.info(f"Processing model selection for {request}.")
