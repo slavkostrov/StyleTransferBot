@@ -1,11 +1,15 @@
 import asyncio
+import datetime
 import logging
 import multiprocessing
+import os.path
 import sys
 import typing as tp
 from dataclasses import dataclass, field
 from io import BytesIO
-from logging import getLogger
+from logging import getLogger, config
+
+config.fileConfig("C:\\Users\\Xiaomi\\Documents\\dls_project_2022_23\\logging.default.conf")
 from queue import Empty
 
 from aiogram import Bot, Dispatcher, executor, types
@@ -14,30 +18,33 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import InputFile
 from aiogram.utils.callback_data import CallbackData
 
-from TransferBot.model import MODEL_REGISTRY
-from bot_answers import welcome_message
+from ..model import MODEL_REGISTRY, ModelABC
+from .bot_answers import welcome_message
 
 logging.basicConfig(level=logging.INFO)
-LOGGER = getLogger(__file__)
+LOGGER = getLogger("transfer_bot.py")
 LOGGER.setLevel(logging.INFO)
 
 
-def process_func(queue: multiprocessing.Queue, model_class: type, content_image: BytesIO,
-                 style_image: tp.Optional[BytesIO] = None) -> tp.NoReturn:
-    model: "ModelABC" = model_class()
-    result: BytesIO = model.process_image(content_image
-                                          , style_image)
+def _process_func(queue: multiprocessing.Queue, model_class: type, content_image: BytesIO,
+                  style_image: tp.Optional[BytesIO] = None) -> tp.NoReturn:
+    """Функция для запуска переноса стиля в отдельном процессе."""
+    model: ModelABC = model_class()
+    result: BytesIO = model.process_image(content_image, style_image)
     queue.put(result)
     sys.exit(0)
 
 
+# TODO: LRU
 _CACHE = {}
 
 RequestAction = CallbackData('r', 'model', 'message_id')
 
 
 class StyleAnswerFilter(Filter):
-    async def check(self, message: types.Message) -> bool:  # [3]
+    """Фильтр сообщений с картинкой-стилем."""
+
+    async def check(self, message: types.Message) -> bool:
         input_message = message.reply_to_message
         if input_message is None:
             return False
@@ -45,8 +52,10 @@ class StyleAnswerFilter(Filter):
         return request is not None
 
 
+# TODO: rewrite it to state maybe
 @dataclass
 class Request:
+    """Класс запроса на перенос стиля."""
     chat_id: int
     message_id: int
     content_file_id: str = field(repr=False)
@@ -59,8 +68,8 @@ class Request:
         self.put_in_cache()
 
     def put_in_cache(self, message_id: int = None) -> tp.NoReturn:
-        LOGGER.info(f"putting in cache with key ({self.chat_id}, {message_id}) (cache size - {len(_CACHE) + 1}).")
         message_id = message_id if message_id is not None else self.message_id
+        LOGGER.info(f"putting in cache with key ({self.chat_id}, {message_id}) (cache size - {len(_CACHE) + 1}).")
         _CACHE[(str(self.chat_id), str(message_id))] = self
 
     @staticmethod
@@ -73,27 +82,30 @@ class Request:
         LOGGER.info(f"get from cache with key ({chat_id}, {message_id}).")
         return _CACHE.get((str(chat_id), str(message_id)))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(f"{self.chat_id}_{self.message_id}_{self.content_file_id}_{self.style_file_id}")
 
 
 @dataclass
 class RequestsQueue:
-    """Очередь запросов на обработку фотографий."""
+    """Очередь запросов на на перенос стиля."""
     _list: tp.List[int] = field(default_factory=list, repr=False)
 
     def put(self, request: Request) -> tp.NoReturn:
+        """Добавляет запрос в очередь."""
         LOGGER.info(f"Added to queue {request}.")
         request_id = hash(request)
         self._list.append(request_id)
 
     def remove(self, request: Request) -> tp.NoReturn:
+        """Удаляет запрос из очереди."""
         request_id = hash(request)
         if request_id in self._list:
             LOGGER.info(f"Removed from queue {request}.")
             self._list.remove(request_id)
 
     def get_position(self, request: Request) -> int:
+        """Возвращает позицию запроса в очереди."""
         request_id = hash(request)
         return self._list.index(request_id) + 1
 
@@ -101,7 +113,7 @@ class RequestsQueue:
 class TransferBot:
     """Класс бота для переноса стиля."""
 
-    def __init__(self, bot_token: str, max_tasks: int = 2):
+    def __init__(self, bot_token: str, timeout_seconds: int = 600, max_tasks: int = 2):
         """
         Конструктор бота для переноса стиля.
 
@@ -114,6 +126,7 @@ class TransferBot:
         self.dispatcher = Dispatcher(self.bot)
         self._setup_handlers()
 
+        self.timeout_seconds = timeout_seconds
         self.queue = RequestsQueue()
 
     def _setup_handlers(self) -> tp.NoReturn:
@@ -127,7 +140,8 @@ class TransferBot:
 
     def run(self) -> tp.NoReturn:
         """Запускает бота."""
-        executor.start_polling(self.dispatcher, skip_updates=True)
+        executor.start_polling(self.dispatcher, skip_updates=False, on_startup=self.on_startup,
+                               on_shutdown=self.on_shutdown)
 
     @staticmethod
     async def send_welcome(message: types.Message) -> tp.NoReturn:
@@ -143,7 +157,7 @@ class TransferBot:
         request.model_id = model_id
 
         LOGGER.info(f"Processing model selection for {request}.")
-        if model_id == "OWN_STYLE":
+        if model_id == "OWN":
             style_request_message = await self.bot.edit_message_text(
                 text=f"Выбран собственный стиль, пришлите стиль ответным сообщением.",
                 reply_markup=None,
@@ -163,10 +177,10 @@ class TransferBot:
 
     async def apply_style(self, request: Request) -> tp.NoReturn:
         """Реализует применение модели и отправку результата пользователю."""
-        # TODO: rewrite model getter maybe
         reply_message = await self._wait_in_queue(request)
 
         queue = multiprocessing.Queue()
+        # TODO: rewrite model getter maybe
         process_kwargs = {
             "model_class": MODEL_REGISTRY.get(request.model_id, MODEL_REGISTRY["VGG16"]),
             "content_image": await self.download_image(request.content_file_id),
@@ -176,10 +190,13 @@ class TransferBot:
             process_kwargs["style_image"] = await self.download_image(request.style_file_id)
 
         LOGGER.info(f"Starting process with {process_kwargs}.")
-        process = multiprocessing.Process(target=process_func, kwargs=process_kwargs, )
+        process = multiprocessing.Process(target=_process_func, kwargs=process_kwargs, )
         process.start()
 
-        # TODO: add something like timeout
+        # TODO: improve timeout and n_retries
+        # TODO: save current process to cache and restore it after bot reload
+        start_time = datetime.datetime.now()
+        n_retries = 0
         while True:
             transformed_image = None
             try:
@@ -189,22 +206,39 @@ class TransferBot:
             if transformed_image is not None:
                 LOGGER.info("got result from child process in processify")
                 break
+
+            process_time = datetime.datetime.now() - start_time
+            if process_time.seconds > self.timeout_seconds and n_retries < 3:
+                LOGGER.error("Got timeout while processing photo... trying it again.")
+                n_retries = n_retries + 1
+                process.kill()
+                process = multiprocessing.Process(target=_process_func, kwargs=process_kwargs, )
+                process.start()
+            elif process_time.seconds > self.timeout_seconds:
+                process.kill()
+
             if not process.is_alive():
+                await reply_message.edit_text("Ошибка при обработке, попробуйте ещё раз.")
+                self.queue.remove(request)
+                # TODO: pop request from _CACHE maybe?
                 raise Exception("process is dead")
+
             await asyncio.sleep(1)
 
         await self.bot.delete_message(request.chat_id, reply_message.message_id)
         LOGGER.info(f"Sending result of {request}.")
+        result_message = "Результат переноса стиля" + (
+            f"c использованием {request.model_id}!" if (request.model_id != "OWN") else "!")
         await self.bot.send_photo(
             chat_id=request.chat_id,
             photo=InputFile(transformed_image),
-            caption="Результат переноса стиля" + (
-                f"c использованием {request.model_id}!" if (request.model_id != "OWN_STYLE") else "!"),
+            caption=result_message,
             reply_to_message_id=request.message_id,
         )
         self.queue.remove(request)
 
     async def process_style_photo(self, message: types.Message) -> tp.NoReturn:
+        """Обрабатывает фотографию со стилем."""
         LOGGER.info(f"Got style photo, message_id = {message.message_id}")
         input_message = message.reply_to_message
         request: Request = Request.pop_from_cache(message.chat.id, input_message.message_id)
@@ -277,16 +311,34 @@ class TransferBot:
         button = InlineKeyboardButton(
             "Свой стиль",
             callback_data=RequestAction.new(
-                model="OWN_STYLE",
+                model="OWN",
                 message_id=message_id,
             )
         )
         keyboard.insert(button)
         return keyboard
 
+    # TODO: write cache and other 'backups' to databaase
+    # for now we use pkl file with cache
+    # so we can continue processing selection after bot's reload
+    # but we can't continue photo processing if it was started already
+    async def on_startup(self, *args):
+        """Логика выполняемая перед стартом бота."""
+        if os.path.exists("_cache.pkl"):
+            with open("_cache.pkl", "rb") as file:
+                global _CACHE
+                import pickle
+                _CACHE = pickle.load(file)
 
-if __name__ == '__main__':
-    from secret import TOKEN
+    async def on_shutdown(self, *args):
+        """Логика выполняемая при отключении бота."""
+        import pickle
+        LOGGER.info("Saving _CACHE to pkl.")
+        with open("_cache.pkl", "wb") as file:
+            pickle.dump(_CACHE, file)
 
+
+def test_run():
+    from .secret import TOKEN
     bot = TransferBot(TOKEN)
     bot.run()

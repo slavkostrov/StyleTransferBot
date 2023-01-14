@@ -1,6 +1,6 @@
 from .protocol import ModelABC, MockModel
-from .vgg import VGGTransfer
-from .vgg2 import VGG19Transfer
+from .vgg16 import VGG16Transfer
+from .vgg19 import VGG19Transfer
 
 MODEL_REGISTRY = {
     value.model_id: value for value in ModelABC.__subclasses__()
