@@ -2,7 +2,7 @@
 
 ##### Usage example:
 
-```
+```python
 from secret import TOKEN
 bot = TransferBot(TOKEN)
 bot.run()
