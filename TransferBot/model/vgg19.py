@@ -14,6 +14,7 @@ from .utils import Normalization, StyleLoss, ContentLoss
 
 LOGGER = getLogger("vgg19.py")
 
+# TODO: hide all into class
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 imsize = (512, 512) if torch.cuda.is_available() else (256, 256)  # use small size if no gpu
@@ -147,8 +148,9 @@ class VGG19Transfer(ModelABC):
     model_id: str = "VGG19"
 
     def __init__(self):
+        super().__init__()
         self.max_image_size = 512
-        self.cnn = models.vgg19(pretrained=True).features.to(device).eval()
+        self.cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
 
     def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
         if style_image is None:

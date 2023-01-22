@@ -3,6 +3,7 @@ import datetime
 import logging
 import multiprocessing
 import os.path
+import pickle
 import sys
 import typing as tp
 from dataclasses import dataclass, field
@@ -16,8 +17,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import InputFile
 from aiogram.utils.callback_data import CallbackData
 
-from ..model import MODEL_REGISTRY, ModelABC
 from .bot_answers import welcome_message
+from ..model import MODEL_REGISTRY, ModelABC, VGG19Transfer
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = getLogger("transfer_bot.py")
@@ -165,7 +166,7 @@ class TransferBot:
         LOGGER.info(f"Processing model selection for {request}.")
         if model_id == "OWN":
             style_request_message = await self.bot.edit_message_text(
-                text=f"Выбран собственный стиль, пришлите стиль ответным сообщением.",
+                text=f"Пришлите стиль ответным сообщением.",
                 reply_markup=None,
                 message_id=query.message.message_id,
                 chat_id=request.chat_id,
@@ -188,7 +189,7 @@ class TransferBot:
         queue = multiprocessing.Queue()
         # TODO: rewrite model getter maybe
         process_kwargs = {
-            "model_class": MODEL_REGISTRY.get(request.model_id, MODEL_REGISTRY["VGG16"]),
+            "model_class": MODEL_REGISTRY.get(request.model_id, VGG19Transfer),
             "content_image": await self.download_image(request.content_file_id),
             "queue": queue,
         }
@@ -233,8 +234,7 @@ class TransferBot:
 
         await self.bot.delete_message(request.chat_id, reply_message.message_id)
         LOGGER.info(f"Sending result of {request}.")
-        result_message = "Результат переноса стиля" + (
-            f"c использованием {request.model_id}!" if (request.model_id != "OWN") else "!")
+        result_message = f"Результат переноса стиля ({request.model_id if request.model_id != 'OWN' else 'Собственный стиль'}):"
         await self.bot.send_photo(
             chat_id=request.chat_id,
             photo=InputFile(transformed_image),
@@ -263,7 +263,7 @@ class TransferBot:
         keyboard: InlineKeyboardMarkup = self.make_keyboard(request.message_id)
         await self.bot.send_message(
             chat_id=message.chat.id,
-            text=f"Выберите модель:",
+            text=f"Выберите стиль:",
             reply_markup=keyboard,
             reply_to_message_id=message.message_id,
         )
@@ -315,7 +315,7 @@ class TransferBot:
             )
             keyboard.insert(button)
         button = InlineKeyboardButton(
-            "Свой стиль",
+            "Ваш стиль",
             callback_data=RequestAction.new(
                 model="OWN",
                 message_id=message_id,
@@ -333,12 +333,10 @@ class TransferBot:
         if os.path.exists("_cache.pkl"):
             with open("_cache.pkl", "rb") as file:
                 global _CACHE
-                import pickle
                 _CACHE = pickle.load(file)
 
     async def on_shutdown(self, *args):
         """Логика выполняемая при отключении бота."""
-        import pickle
         LOGGER.info("Saving _CACHE to pkl.")
         with open("_cache.pkl", "wb") as file:
             pickle.dump(_CACHE, file)
