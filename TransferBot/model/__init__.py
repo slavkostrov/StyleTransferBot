@@ -1,12 +1,11 @@
 from inspect import isabstract
 
+from . import feature_extraction
 from .protocol import ModelABC
-from .vgg16 import VGG16Transfer
-from .vgg19 import VGG19Transfer
-from .transformer_net import MunkModel, MonetModel, KandinskyModel, VanGoghModel
-
+from .fast_transfer import MunkModel, MonetModel, KandinskyModel, VanGoghModel
+from .slow_transfer import VGG16Transfer, VGG19Transfer
 
 MODEL_REGISTRY = {
     value.model_id: value for value in ModelABC.__subclasses__()
-    if not isabstract(value)
+    if not isabstract(value) and "VGG" not in value.__name__
 }
