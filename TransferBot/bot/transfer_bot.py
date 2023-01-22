@@ -33,7 +33,7 @@ def _process_func(queue: multiprocessing.Queue, model_class: type, content_image
     sys.exit(0)
 
 
-# TODO: LRU
+# TODO: LRU or smth with timeout
 _CACHE = {}
 
 RequestAction = CallbackData('r', 'model', 'message_id')
@@ -210,6 +210,7 @@ class TransferBot:
                 break
 
             process_time = datetime.datetime.now() - start_time
+            print(process_time)
             if process_time.seconds > self.timeout_seconds and n_retries < 3:
                 LOGGER.error("Got timeout while processing photo... trying it again.")
                 n_retries = n_retries + 1
