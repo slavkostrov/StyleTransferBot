@@ -27,7 +27,7 @@ class Vgg16(torch.nn.Module):
             (0, 4),
             (4, 9),
             (9, 16),
-            (16, 13)
+            (16, 23)
         ]
 
         self.features_slices = []
