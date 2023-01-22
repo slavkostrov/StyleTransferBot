@@ -3,49 +3,30 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from logging import getLogger
 
-import requests
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import models
-from torchvision import transforms
+import torchvision.models as models
+import torchvision.transforms as transforms
 
 from . import ModelABC
 from . import utils
+from .feature_extraction import get_style_model_and_losses, Vgg16
 
-LOGGER = getLogger("vgg16.py")
+LOGGER = getLogger("slow_transfer.py")
 
+# TODO: hide all into class
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class Vgg16(torch.nn.Module):
+imsize = (512, 512) if torch.cuda.is_available() else (256, 256)
 
-    def __init__(self):
-        super(Vgg16, self).__init__()
+loader = transforms.Compose([
+    transforms.Resize(imsize),
+    transforms.ToTensor()]
+)
 
-        vgg_pretrained_features = models.vgg16(pretrained=True).features
-
-        features_slices_ranges = [
-            (0, 4),
-            (4, 9),
-            (9, 16),
-            (16, 23)
-        ]
-
-        self.features_slices = []
-        for slice_id, (start, end) in enumerate(features_slices_ranges):
-            feature_slice = torch.nn.Sequential()
-            setattr(self, f"slice_{slice_id}", feature_slice)
-            for i in range(start, end):
-                vgg_slice = vgg_pretrained_features[i]
-                vgg_slice.requires_grad = False
-                feature_slice.add_module(f"slice_{slice_id}_{i}", vgg_slice)
-            self.features_slices.append(feature_slice)
-
-    def forward(self, X):
-        out = list()
-        for feature_slice in self.features_slices:
-            X = feature_slice(X)
-            out.append(X)
-        return out
+cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
+cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
 
 
 @dataclass
@@ -63,7 +44,7 @@ class VGG16Transfer(ModelABC):
     tv_weight: float = field(default=2.)
 
     device: str = field(default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu")
-    vgg: torch.nn.Module = field(default_factory=lambda: Vgg16())
+    vgg: torch.nn.Module = field(default_factory=Vgg16)
 
     @property
     def image_size(self):
@@ -92,10 +73,7 @@ class VGG16Transfer(ModelABC):
 
     def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
         if style_image is None:
-            LOGGER.warning("Loading mock style image.")
-            response = requests.get(
-                "https://uploads4.wikiart.org/00142/images/vincent-van-gogh/the-starry-night.jpg!Large.jpg")
-            style_image = BytesIO(response.content)
+            raise RuntimeError("style_image must be defined.")
 
         LOGGER.debug("Loading input images.")
         content_img, content_size, result_size = self.load_image(content_image, self.image_size, self.transforms)
@@ -149,3 +127,87 @@ class VGG16Transfer(ModelABC):
             optimizer.step(closure)
 
         return self.get_bytes_image(y, content_size)
+
+
+def get_input_optimizer(input_img):
+    optimizer = optim.LBFGS([input_img])
+    return optimizer
+
+
+def run_style_transfer(cnn, normalization_mean, normalization_std,
+                       content_img, style_img, input_img, num_steps=300,
+                       style_weight=100000, content_weight=1):
+    """Run the style transfer."""
+    LOGGER.info('Building the style transfer model..')
+    model, style_losses, content_losses = get_style_model_and_losses(cnn,
+                                                                     normalization_mean, normalization_std, style_img,
+                                                                     content_img)
+
+    input_img.requires_grad_(True)
+    model.requires_grad_(False)
+
+    optimizer = get_input_optimizer(input_img)
+
+    LOGGER.info('Optimizing..')
+    run = [0]
+    while run[0] <= num_steps:
+
+        def closure():
+            with torch.no_grad():
+                input_img.clamp_(0, 1)
+
+            optimizer.zero_grad()
+            model(input_img.to(device))
+            style_score = 0
+            content_score = 0
+
+            for sl in style_losses:
+                style_score += sl.loss
+            for cl in content_losses:
+                content_score += cl.loss
+
+            style_score *= style_weight
+            content_score *= content_weight
+
+            loss = style_score + content_score
+            loss.backward()
+
+            run[0] += 1
+            if run[0] % 50 == 0:
+                LOGGER.info("run {}:".format(run))
+                LOGGER.info('Style Loss : {:4f} Content Loss: {:4f}'.format(style_score.item(), content_score.item()))
+
+            return style_score + content_score
+
+        optimizer.step(closure)
+
+    with torch.no_grad():
+        input_img.clamp_(0, 1)
+
+    return input_img
+
+
+class VGG19Transfer(ModelABC):
+    model_id: str = "VGG19"
+
+    def __init__(self):
+        super().__init__()
+        self.max_image_size = 512
+        self.cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
+
+    def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
+        if style_image is None:
+            raise RuntimeError("style_image must be defined.")
+
+        content_image, content_size, result_size = self.load_image(content_image, imsize, loader)
+        style_image, _, _ = self.load_image(style_image, imsize, loader)
+
+        output = run_style_transfer(
+            self.cnn,
+            cnn_normalization_mean,
+            cnn_normalization_std,
+            content_image.clone(),
+            style_image,
+            content_image
+        )
+        return self.get_bytes_image(output, result_size)
