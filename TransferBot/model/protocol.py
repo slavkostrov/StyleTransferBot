@@ -1,23 +1,33 @@
 """Модуль с описанием протокала для модели."""
+import abc
+from abc import ABC
 from io import BytesIO
-from typing import Protocol, runtime_checkable, Optional
+from typing import Optional
 
+import torch
 from PIL import Image
 
 from . import utils
 
 
-@runtime_checkable
-class ModelABC(Protocol):
-    model_id: str = "unknown"
+class ModelABC(ABC):
 
+    def __init__(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    @abc.abstractmethod
     def process_image(self, content_image: BytesIO, style_image: Optional[BytesIO] = None) -> BytesIO:
         pass
 
+    @abc.abstractmethod
+    def model_id(self):
+        pass
+
     @staticmethod
-    def get_bytes_image(tensor, size):
+    def get_bytes_image(tensor, size=None):
         final_image = utils.get_pil_image(tensor)
-        final_image = final_image.resize(size, Image.ANTIALIAS)
+        if size:
+            final_image = final_image.resize(size, Image.ANTIALIAS)
         return_image = BytesIO()
         final_image.save(return_image, "jpeg")
         return_image.seek(0)
@@ -36,10 +46,3 @@ class ModelABC(Protocol):
         image = transform(image)
         image = image.repeat(1, 1, 1, 1)
         return image, input_image_size, ssize
-
-
-class MockModel(ModelABC):
-    model_id: str = "mock"
-
-    def process_image(self, img: BytesIO) -> BytesIO:
-        return img
