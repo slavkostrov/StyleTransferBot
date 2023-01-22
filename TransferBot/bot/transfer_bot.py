@@ -141,8 +141,12 @@ class TransferBot:
 
     def run(self) -> tp.NoReturn:
         """Запускает бота."""
-        executor.start_polling(self.dispatcher, skip_updates=False, on_startup=self.on_startup,
-                               on_shutdown=self.on_shutdown)
+        executor.start_polling(
+            self.dispatcher,
+            skip_updates=False,
+            on_startup=self.on_startup,
+            on_shutdown=self.on_shutdown
+        )
 
     @staticmethod
     async def send_welcome(message: types.Message) -> tp.NoReturn:
@@ -210,7 +214,6 @@ class TransferBot:
                 break
 
             process_time = datetime.datetime.now() - start_time
-            print(process_time)
             if process_time.seconds > self.timeout_seconds and n_retries < 3:
                 LOGGER.error("Got timeout while processing photo... trying it again.")
                 n_retries = n_retries + 1
