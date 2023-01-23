@@ -10,23 +10,20 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 
 from . import ModelABC
-from . import utils
-from .feature_extraction import get_style_model_and_losses, Vgg16
+from .feature_extraction import Vgg16, get_style_model_and_losses
 
 LOGGER = getLogger("slow_transfer.py")
 
 # TODO: hide all into class
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 imsize = (512, 512) if torch.cuda.is_available() else (256, 256)
 
-loader = transforms.Compose([
-    transforms.Resize(imsize),
-    transforms.ToTensor()]
-)
 
-cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
-cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
+def gram_matrix(y):
+    (b, ch, h, w) = y.size()
+    features = y.view(b, ch, w * h)
+    features_t = features.transpose(1, 2)
+    gram = features.bmm(features_t) / (ch * h * w)
+    return gram
 
 
 @dataclass
@@ -34,8 +31,7 @@ class VGG16Transfer(ModelABC):
     model_id: str = "VGG16"
 
     epochs: int = field(default=150)
-    default_image_size: int = field(default=256)
-    max_image_size: int = field(default=512)
+    default_image_size: tp.Union[float, tp.Tuple[float]] = field(default=256.)
 
     batch_size: int = field(default=1)
     learning_rate: float = field(default=0.01)
@@ -46,26 +42,15 @@ class VGG16Transfer(ModelABC):
     device: str = field(default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu")
     vgg: torch.nn.Module = field(default_factory=Vgg16)
 
-    @property
-    def image_size(self):
-        size = self.default_image_size
-        if isinstance(size, int):
-            size = (size, size)
-        return size
-
     def __post_init__(self):
-        self.transforms = transforms.Compose([
-            transforms.Resize(self.image_size),
-            transforms.ToTensor(),
-        ])
-
-        self.style_transform = transforms.Compose([
-            transforms.Resize(self.image_size),
-            transforms.ToTensor(),
-        ])
-
         self.vgg = self.vgg.to(self.device)
         LOGGER.info(f"model is loaded. using device {self.device}.")
+
+    def get_transforms(self) -> transforms.Compose:
+        return transforms.Compose([
+            transforms.Resize(self.default_image_size),
+            transforms.ToTensor(),
+        ])
 
     def get_features(self, img):
         img = img.to(self.device)
@@ -76,13 +61,13 @@ class VGG16Transfer(ModelABC):
             raise RuntimeError("style_image must be defined.")
 
         LOGGER.debug("Loading input images.")
-        content_img, content_size, result_size = self.load_image(content_image, self.image_size, self.transforms)
-        style_img, _, _ = self.load_image(style_image, result_size, self.style_transform)
+        content_img, content_size = self.load_image(content_image)
+        style_img, _ = self.load_image(style_image)
         LOGGER.debug("Getting features from model.")
         features_style, features_content = self.get_features(style_img), self.get_features(content_img)
         LOGGER.debug("Got features from model.")
 
-        gram_style = [utils.gram_matrix(y) for y in features_style]
+        gram_style = [gram_matrix(y) for y in features_style]
         mse_loss = nn.MSELoss()
 
         y = content_img.detach()
@@ -95,7 +80,7 @@ class VGG16Transfer(ModelABC):
                 optimizer.zero_grad()
                 y.data.clamp_(0, 1)
                 features_y = self.vgg(y.to(self.device))
-                gram_style_y = [utils.gram_matrix(i) for i in features_y]
+                gram_style_y = [gram_matrix(i) for i in features_y]
 
                 fc = features_content[-1]
                 fy = features_y[-1]
@@ -129,85 +114,103 @@ class VGG16Transfer(ModelABC):
         return self.get_bytes_image(y, content_size)
 
 
-def get_input_optimizer(input_img):
-    optimizer = optim.LBFGS([input_img])
-    return optimizer
-
-
-def run_style_transfer(cnn, normalization_mean, normalization_std,
-                       content_img, style_img, input_img, num_steps=300,
-                       style_weight=100000, content_weight=1):
-    """Run the style transfer."""
-    LOGGER.info('Building the style transfer model..')
-    model, style_losses, content_losses = get_style_model_and_losses(cnn,
-                                                                     normalization_mean, normalization_std, style_img,
-                                                                     content_img)
-
-    input_img.requires_grad_(True)
-    model.requires_grad_(False)
-
-    optimizer = get_input_optimizer(input_img)
-
-    LOGGER.info('Optimizing..')
-    run = [0]
-    while run[0] <= num_steps:
-
-        def closure():
-            with torch.no_grad():
-                input_img.clamp_(0, 1)
-
-            optimizer.zero_grad()
-            model(input_img.to(device))
-            style_score = 0
-            content_score = 0
-
-            for sl in style_losses:
-                style_score += sl.loss
-            for cl in content_losses:
-                content_score += cl.loss
-
-            style_score *= style_weight
-            content_score *= content_weight
-
-            loss = style_score + content_score
-            loss.backward()
-
-            run[0] += 1
-            if run[0] % 50 == 0:
-                LOGGER.info("run {}:".format(run))
-                LOGGER.info('Style Loss : {:4f} Content Loss: {:4f}'.format(style_score.item(), content_score.item()))
-
-            return style_score + content_score
-
-        optimizer.step(closure)
-
-    with torch.no_grad():
-        input_img.clamp_(0, 1)
-
-    return input_img
-
-
 class VGG19Transfer(ModelABC):
     model_id: str = "VGG19"
 
     def __init__(self):
         super().__init__()
-        self.max_image_size = 512
+        self.cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(self.device)
+        self.cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(self.device)
         self.cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
+
+    def get_transforms(self) -> transforms.Compose:
+        return transforms.Compose([
+            transforms.Resize(imsize),
+            transforms.ToTensor()]
+        )
 
     def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
         if style_image is None:
             raise RuntimeError("style_image must be defined.")
 
-        content_image, content_size, result_size = self.load_image(content_image, imsize, loader)
-        style_image, _, _ = self.load_image(style_image, imsize, loader)
+        content_image, content_size = self.load_image(content_image)
+        style_image, _ = self.load_image(style_image)
 
-        output = run_style_transfer(
-            self.cnn,
-            cnn_normalization_mean,
-            cnn_normalization_std,
+        output = self.run_style_transfer(
+            self.cnn_normalization_mean,
+            self.cnn_normalization_std,
             content_image.clone(),
             style_image,
             content_image
         )
-        return self.get_bytes_image(output, result_size)
+        return self.get_bytes_image(output, content_size)
+
+    @staticmethod
+    def get_input_optimizer(input_img):
+        optimizer = optim.LBFGS([input_img])
+        return optimizer
+
+    def run_style_transfer(
+            self,
+            normalization_mean,
+            normalization_std,
+            content_img,
+            style_img,
+            input_img,
+            num_steps=300,
+            style_weight=100000,
+            content_weight=1
+    ):
+        """Run the style transfer."""
+        LOGGER.info('Building the style transfer model..')
+        model, style_losses, content_losses = get_style_model_and_losses(
+            self.cnn,
+            normalization_mean,
+            normalization_std,
+            style_img,
+            content_img
+        )
+
+        input_img.requires_grad_(True)
+        model.requires_grad_(False)
+
+        optimizer = self.get_input_optimizer(input_img)
+
+        LOGGER.info('Optimizing..')
+        run = [0]
+        while run[0] <= num_steps:
+
+            def closure():
+                with torch.no_grad():
+                    input_img.clamp_(0, 1)
+
+                optimizer.zero_grad()
+                model(input_img.to(self.device))
+                style_score = 0
+                content_score = 0
+
+                for sl in style_losses:
+                    style_score += sl.loss
+                for cl in content_losses:
+                    content_score += cl.loss
+
+                style_score *= style_weight
+                content_score *= content_weight
+
+                loss = style_score + content_score
+                loss.backward()
+
+                run[0] += 1
+                if run[0] % 50 == 0:
+                    LOGGER.info("run {}:".format(run))
+                    LOGGER.info(
+                        'Style Loss : {:4f} Content Loss: {:4f}'.format(style_score.item(), content_score.item()))
+
+                return style_score + content_score
+
+            optimizer.step(closure)
+
+        with torch.no_grad():
+            input_img.clamp_(0, 1)
+
+        return input_img

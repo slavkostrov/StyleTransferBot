@@ -115,14 +115,16 @@ class RequestsQueue:
 class TransferBot:
     """Класс бота для переноса стиля."""
 
-    def __init__(self, bot_token: str, timeout_seconds: int = 600, max_tasks: int = 2):
+    def __init__(self, bot_token: str, timeout_seconds: int = 600, max_tasks: int = 2, max_retries_number: int = 3):
         """
         Конструктор бота для переноса стиля.
 
         :param bot_token: Telegram токен бота.
         :param max_tasks: максимальное количество асинхронных задач переноса.
+        :param max_retries_number: максимальное количество попыток обработки изображения.
         """
 
+        self.max_retries_number = max_retries_number
         self.bot = Bot(token=bot_token)
         self.max_tasks = max_tasks
         self.dispatcher = Dispatcher(self.bot)
@@ -215,14 +217,17 @@ class TransferBot:
                 break
 
             process_time = datetime.datetime.now() - start_time
-            if process_time.seconds > self.timeout_seconds and n_retries < 3:
+            if process_time.seconds > self.timeout_seconds:
                 LOGGER.error("Got timeout while processing photo... trying it again.")
-                n_retries = n_retries + 1
-                process.kill()
-                process = multiprocessing.Process(target=_process_func, kwargs=process_kwargs, )
-                process.start()
-            elif process_time.seconds > self.timeout_seconds:
-                process.kill()
+                if n_retries < self.max_retries_number:
+                    n_retries = n_retries + 1
+                    process.kill()
+                    process = multiprocessing.Process(target=_process_func, kwargs=process_kwargs, )
+                    process.start()
+                    LOGGER.warning(f"{n_retries + 1} retry attempt is started.")
+                else:
+                    LOGGER.error("Reached max_retries_number, image wont be processed.")
+                    process.kill()
 
             if not process.is_alive():
                 await reply_message.edit_text("Ошибка при обработке, попробуйте ещё раз.")

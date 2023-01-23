@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
-from .utils import Normalization, StyleLoss, ContentLoss
+from .modules import Normalization, StyleLoss, ContentLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -94,18 +94,12 @@ class Vgg16(torch.nn.Module):
         return out
 
 
-content_layers_default = ['conv_4']
-style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
-
-
 def get_style_model_and_losses(
         cnn,
         normalization_mean,
         normalization_std,
         style_img,
         content_img,
-        content_layers=content_layers_default,
-        style_layers=style_layers_default
 ):
     normalization = Normalization(normalization_mean, normalization_std).to(device)
     content_losses = []
@@ -129,14 +123,14 @@ def get_style_model_and_losses(
 
         model.add_module(name, layer)
 
-        if name in content_layers:
+        if name in ['conv_4']:
             # add content loss:
             target = model(content_img.to(device)).detach()
             content_loss = ContentLoss(target)
             model.add_module("content_loss_{}".format(i), content_loss)
             content_losses.append(content_loss)
 
-        if name in style_layers:
+        if name in ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']:
             # add style loss:
             target_feature = model(style_img.to(device)).detach()
             style_loss = StyleLoss(target_feature)
