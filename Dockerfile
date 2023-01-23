@@ -12,4 +12,4 @@ COPY runner.py runner.py
 RUN pip3 install -r requirements.txt
 RUN pip3 install -e .
 
-CMD ["python3", "runner.py"]
+CMD ["python3", "run.py"]
