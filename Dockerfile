@@ -7,7 +7,7 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 COPY TransferBot TransferBot
 COPY setup.py setup.py
-COPY runner.py runner.py
+COPY runner.py run.py
 
 RUN pip3 install -r requirements.txt
 RUN pip3 install -e .
