@@ -18,7 +18,20 @@ if __name__ == "__main__":
 ```
 
 ##### Advanced options:
-* TBD
+* Custom models
+
+You can write your own model, that will implement `TransferBot.model.ModelABC` interface. 
+After, you can register this model. See example bellow:
+
+```python
+from TransferBot.model import register_model, MunkModel
+
+if __name__ == "__main__":
+    register_model(MunkModel, model_id="custom_model")
+    # run bot
+```
+
+After that you'll see your model in bot keyboard.
 
 ##### Tests:
 * TBD
