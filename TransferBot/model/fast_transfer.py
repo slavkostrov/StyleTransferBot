@@ -1,3 +1,4 @@
+"""Module with pretrained style transfer models for fast transferring."""
 import typing as tp
 from abc import abstractmethod
 from io import BytesIO
