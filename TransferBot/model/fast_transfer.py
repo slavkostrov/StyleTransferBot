@@ -5,26 +5,16 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
-from torch.autograd import Variable
 from torchvision.transforms import transforms
-from torchvision.utils import save_image
 
-from TransferBot.model import ModelABC
 
 # TODO: maybe move it to class attributes
+from . import ModelABC
 from .feature_extraction import TransformerNet
 
 imsize = (512, 512) if torch.cuda.is_available() else (256, 256)
 mean = np.array([0.485, 0.456, 0.406])
 std = np.array([0.229, 0.224, 0.225])
-
-
-def get_test_transform(image_size=None):
-    """ Transforms for test image """
-    resize = [transforms.Resize(image_size)] if image_size else []
-    transform = transforms.Compose(resize + [transforms.ToTensor(), transforms.Normalize(mean, std)])
-    return transform
 
 
 class PretrainedTransferModel(ModelABC):
@@ -35,23 +25,21 @@ class PretrainedTransferModel(ModelABC):
         self.model = TransformerNet()
 
         checkpoint_path = Path(__file__).parent.joinpath(f"checkpoints/{self.check_point_path}")
-        self.transform = get_test_transform()
 
         self.transformer = TransformerNet().to(self.device)
         self.transformer.load_state_dict(torch.load(checkpoint_path))
         self.transformer.eval()
 
+    def get_transforms(self) -> transforms.Compose:
+        return transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean, std)])
+
     def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
-        image_tensor = Variable(self.transform(Image.open(content_image))).to(self.device)
-        image_tensor = image_tensor.unsqueeze(0)
+        image_tensor, _ = self.load_image(content_image)
 
         with torch.no_grad():
             stylized_image = self.denormalize(self.transformer(image_tensor)).cpu()
 
-        return_image = BytesIO()
-        save_image(stylized_image, return_image, format="jpeg")
-        return_image.seek(0)
-        return return_image
+        return self.get_bytes_image(stylized_image)
 
     @staticmethod
     def denormalize(tensors):
