@@ -1,3 +1,4 @@
+"""Module contains slow style transfer implementations."""
 import typing as tp
 from dataclasses import dataclass, field
 from io import BytesIO

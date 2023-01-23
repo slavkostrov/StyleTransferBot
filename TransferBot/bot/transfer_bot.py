@@ -1,3 +1,4 @@
+"""Main module with TG bot description."""
 import asyncio
 import datetime
 import logging
@@ -25,9 +26,19 @@ LOGGER = getLogger("transfer_bot.py")
 LOGGER.setLevel(logging.INFO)
 
 
-def _process_func(queue: multiprocessing.Queue, model_class: type, content_image: BytesIO,
-                  style_image: tp.Optional[BytesIO] = None) -> tp.NoReturn:
-    """Функция для запуска переноса стиля в отдельном процессе."""
+def _process_func(
+        queue: multiprocessing.Queue,
+        model_class: type,
+        content_image: BytesIO,
+        style_image: tp.Optional[BytesIO] = None) -> tp.NoReturn:
+    """Function for processing image in separate process.
+
+    :param queue: queue object for storing image
+    :param model_class: class of transfer style model
+    :param content_image: image with content to stylize
+    :param style_image: image with style
+    :return: None
+    """
     model: ModelABC = model_class()
     result: BytesIO = model.process_image(content_image, style_image)
     queue.put(result)
@@ -41,7 +52,7 @@ RequestAction = CallbackData('r', 'model', 'message_id')
 
 
 class StyleAnswerFilter(Filter):
-    """Фильтр сообщений с картинкой-стилем."""
+    """Filter messages with user's style."""
 
     async def check(self, message: types.Message) -> bool:
         input_message = message.reply_to_message
@@ -57,7 +68,7 @@ class StyleAnswerFilter(Filter):
 # so far we use request with dumping backups.
 @dataclass
 class Request:
-    """Класс запроса на перенос стиля."""
+    """Class of image processing request."""
     chat_id: int
     message_id: int
     content_file_id: str = field(repr=False)
@@ -70,17 +81,34 @@ class Request:
         self.put_in_cache()
 
     def put_in_cache(self, message_id: int = None) -> tp.NoReturn:
+        """Putting request into global cache.
+
+        :param message_id: id of target message.
+        :return: None
+        """
         message_id = message_id if message_id is not None else self.message_id
         LOGGER.info(f"putting in cache with key ({self.chat_id}, {message_id}) (cache size - {len(_CACHE) + 1}).")
         _CACHE[(str(self.chat_id), str(message_id))] = self
 
     @staticmethod
     def pop_from_cache(chat_id: int, message_id: int) -> "Request":
+        """Pop request from global cache.
+
+        :param chat_id: chat of request
+        :param message_id: message of request
+        :return: Request object
+        """
         LOGGER.info(f"pop from cache with key ({chat_id}, {message_id}) (cache size - {len(_CACHE) - 1}).")
         return _CACHE.pop((str(chat_id), str(message_id)))
 
     @staticmethod
     def get_from_cache(chat_id: int, message_id: int) -> "Request":
+        """Get request from global cache.
+
+        :param chat_id: chat of request
+        :param message_id: message of request
+        :return: Request object
+        """
         LOGGER.info(f"get from cache with key ({chat_id}, {message_id}).")
         return _CACHE.get((str(chat_id), str(message_id)))
 
@@ -90,38 +118,49 @@ class Request:
 
 @dataclass
 class RequestsQueue:
-    """Очередь запросов на на перенос стиля."""
+    """Queue of requests."""
     _list: tp.List[int] = field(default_factory=list, repr=False)
 
     def put(self, request: Request) -> tp.NoReturn:
-        """Добавляет запрос в очередь."""
+        """ Add new request to queue.
+
+        :param request: request instance
+        :return: None
+        """
         LOGGER.info(f"Added to queue {request}.")
         request_id = hash(request)
         self._list.append(request_id)
 
     def remove(self, request: Request) -> tp.NoReturn:
-        """Удаляет запрос из очереди."""
+        """Remove object from queue.
+
+        :param request: request instance to be removed.
+        :return: None
+        """
         request_id = hash(request)
         if request_id in self._list:
             LOGGER.info(f"Removed from queue {request}.")
             self._list.remove(request_id)
 
     def get_position(self, request: Request) -> int:
-        """Возвращает позицию запроса в очереди."""
+        """Get position of request in queue.
+
+        :param request: request instance to check
+        :return: position
+        """
         request_id = hash(request)
         return self._list.index(request_id) + 1
 
 
 class TransferBot:
-    """Класс бота для переноса стиля."""
+    """Class of style transfer telegram Bot."""
 
     def __init__(self, bot_token: str, timeout_seconds: int = 600, max_tasks: int = 2, max_retries_number: int = 3):
-        """
-        Конструктор бота для переноса стиля.
+        """TransferBot constructor
 
-        :param bot_token: Telegram токен бота.
-        :param max_tasks: максимальное количество асинхронных задач переноса.
-        :param max_retries_number: максимальное количество попыток обработки изображения.
+        :param bot_token: telegram bot token.
+        :param max_tasks: number of maximum tasks for parallel processing.
+        :param max_retries_number: maximum number of retries if image processing is failed.
         """
 
         self.max_retries_number = max_retries_number
@@ -134,7 +173,7 @@ class TransferBot:
         self.queue = RequestsQueue()
 
     def _setup_handlers(self) -> tp.NoReturn:
-        """Выполняет установку всех обработчиков."""
+        """Setup input messages handlers.."""
         LOGGER.info("Setup handlers.")
         self.dispatcher.register_message_handler(self.send_welcome, commands=["start", "help"])
         self.dispatcher.register_message_handler(self.process_style_photo, StyleAnswerFilter(), content_types=["photo"])
@@ -143,7 +182,7 @@ class TransferBot:
         LOGGER.info("Handlers setup is ended.")
 
     def run(self) -> tp.NoReturn:
-        """Запускает бота."""
+        """Run bot pooling."""
         executor.start_polling(
             self.dispatcher,
             skip_updates=False,
@@ -153,12 +192,12 @@ class TransferBot:
 
     @staticmethod
     async def send_welcome(message: types.Message) -> tp.NoReturn:
-        """Отсправляет приветственное сообщение."""
+        """Send welcome message to user."""
         LOGGER.info(f"Sending welcome message to {message.chat.id}.")
         await message.reply(welcome_message.format(message=message), parse_mode='MarkdownV2')
 
     async def process_model_selection(self, query: types.CallbackQuery) -> tp.NoReturn:
-        """Реализует обработку выбора стиля/модели."""
+        """Process user's selection of model."""
         _, model_id, message_id = query.data.split(":")
         LOGGER.info(f"Got model selection for message_id={message_id} and {model_id}")
         request = Request.pop_from_cache(query.from_user.id, message_id)
@@ -185,7 +224,7 @@ class TransferBot:
             await self.bot.delete_message(request.chat_id, query.message.message_id)
 
     async def apply_style(self, request: Request) -> tp.NoReturn:
-        """Реализует применение модели и отправку результата пользователю."""
+        """Apply style to user's image and send result."""
         reply_message = await self._wait_in_queue(request)
 
         queue = multiprocessing.Queue()
@@ -216,8 +255,12 @@ class TransferBot:
                 LOGGER.info("got result from child process in processify")
                 break
 
+            # TODO: fix, doesnt work yet
             process_time = datetime.datetime.now() - start_time
-            if process_time.seconds > self.timeout_seconds:
+            if process_time.seconds > self.timeout_seconds or not process.is_alive():
+                if process.is_alive():
+                    process.kill()
+
                 LOGGER.error("Got timeout while processing photo... trying it again.")
                 if n_retries < self.max_retries_number:
                     n_retries = n_retries + 1
@@ -227,13 +270,10 @@ class TransferBot:
                     LOGGER.warning(f"{n_retries + 1} retry attempt is started.")
                 else:
                     LOGGER.error("Reached max_retries_number, image wont be processed.")
-                    process.kill()
-
-            if not process.is_alive():
-                await reply_message.edit_text("Ошибка при обработке, попробуйте ещё раз.")
-                self.queue.remove(request)
-                # TODO: pop request from _CACHE maybe?
-                raise Exception("process is dead")
+                    await reply_message.edit_text("Ошибка при обработке, попробуйте ещё раз.")
+                    self.queue.remove(request)
+                    # TODO: pop request from _CACHE maybe?
+                    raise Exception("process is dead")
 
             await asyncio.sleep(1)
 
@@ -249,7 +289,7 @@ class TransferBot:
         self.queue.remove(request)
 
     async def process_style_photo(self, message: types.Message) -> tp.NoReturn:
-        """Обрабатывает фотографию со стилем."""
+        """Process style image."""
         LOGGER.info(f"Got style photo, message_id = {message.message_id}")
         input_message = message.reply_to_message
         request: Request = Request.pop_from_cache(message.chat.id, input_message.message_id)
@@ -258,7 +298,7 @@ class TransferBot:
         await self.apply_style(request)
 
     async def process_content_photo(self, message: types.Message) -> tp.NoReturn:
-        """Реализует логику по обработке фотографий."""
+        """Process content images."""
         request = Request(
             chat_id=message.chat.id,
             message_id=message.message_id,
@@ -274,7 +314,7 @@ class TransferBot:
         )
 
     async def _wait_in_queue(self, request: Request) -> types.Message:
-        """Реализует ожидание в очереди на обработку фотографий."""
+        """Put requests into queue and monitor it."""
         self.queue.put(request)
         current_position = self.queue.get_position(request)
         reply_message = await self.bot.send_message(
@@ -300,7 +340,7 @@ class TransferBot:
         return reply_message
 
     async def download_image(self, file_id: str) -> BytesIO:
-        """Скачивает картинку в BytesIO."""
+        """Download image into BytesIO stream."""
         LOGGER.info(f"Downloading file with id={file_id}.")
         file_obj = await self.bot.get_file(file_id)
         byte_stream = BytesIO()
@@ -309,6 +349,7 @@ class TransferBot:
 
     @staticmethod
     def make_keyboard(message_id: tp.Union[int, str]) -> InlineKeyboardMarkup:
+        """Make keyboard based on model registry."""
         keyboard = InlineKeyboardMarkup()
         for model_id in MODEL_REGISTRY.keys():
             button = InlineKeyboardButton(
@@ -334,14 +375,16 @@ class TransferBot:
     # so we can continue processing selection after bot's reload
     # but we can't continue photo processing if it was started already
     async def on_startup(self, *args):
-        """Логика выполняемая перед стартом бота."""
+        """Startup preparation.
+        Load previous requests from local cache"""
         if os.path.exists("_cache.pkl"):
             with open("_cache.pkl", "rb") as file:
                 global _CACHE
                 _CACHE = pickle.load(file)
 
     async def on_shutdown(self, *args):
-        """Логика выполняемая при отключении бота."""
+        """Shutdown preparation.
+        Save active (w/o answers) requests to cache."""
         LOGGER.info("Saving _CACHE to pkl.")
         with open("_cache.pkl", "wb") as file:
             pickle.dump(_CACHE, file)

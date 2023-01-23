@@ -1,3 +1,4 @@
+"""Package with models desctiptions."""
 import typing as tp
 from inspect import isabstract
 
