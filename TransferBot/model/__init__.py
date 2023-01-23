@@ -19,6 +19,9 @@ def register_model(model_class: type, model_id: str) -> tp.NoReturn:
     :param model_id: model_id, string name for model.
     :return: None
     """
-    if not isinstance(model_class, ModelABC):
+    if (
+            not all(hasattr(model_class, name) for name in dir(ModelABC) if not name.startswith("_"))
+            or isabstract(model_class)
+    ):
         raise TypeError("model_class must be inherited from ModelABC.")
     MODEL_REGISTRY[model_id] = model_class
