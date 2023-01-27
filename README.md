@@ -17,6 +17,15 @@ if __name__ == "__main__":
     bot.run()
 ```
 
+##### Deploy with Docker:
+
+1. Clone this repo.
+2. Write an `.env` file with your `TG_STYLE_BOT_TOKEN` in it.
+3. Run `docker-compose up -d` and wait for the build to finish, run.py will be used in container, 
+so you can edit if you want to.
+
+That's it. Enjoy your dockerized transfer style bot everywhere. 🚀
+
 ##### Advanced options:
 * Custom models
 
