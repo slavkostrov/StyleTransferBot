@@ -69,7 +69,7 @@ pytest testing/                 # run tests
 
 ## Contacts
 
-[@slavkostrov](t.me/slavkostrov)
+[@slavkostrov](https://t.me/slavkostrov)
 
 ## License
 
