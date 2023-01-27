@@ -17,12 +17,12 @@ RUN mkdir -p /codebase /storage
 ADD . /codebase
 WORKDIR /codebase
 
-COPY requirements.txt requirements.txt
+COPY requirements.txt /codebase/requirements.txt
 COPY TransferBot /codebase/TransferBot
 COPY setup.py /codebase/setup.py
 COPY run.py /codebase/run.py
 
-RUN pip3 install -r /requirements.txt
+RUN pip3 install -r /codebase/requirements.txt
 RUN pip3 install -e /codebase
 
 CMD ["python3", "run.py"]
