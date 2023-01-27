@@ -42,7 +42,7 @@ class ModelABC(ABC):
         """Process image, apply style to content or use pretrained style.
 
         :param content_image: image with content, will be stylized
-        :param style_image: image with style which be transferred on content
+        :param style_image: image with style which be transferred on content (optional for pretrained styles)
         :return: stylized image
         """
         pass

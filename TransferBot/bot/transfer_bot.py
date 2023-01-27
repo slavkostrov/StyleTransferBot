@@ -8,6 +8,7 @@ import pickle
 import sys
 import typing as tp
 from dataclasses import dataclass, field
+from functools import partial
 from io import BytesIO
 from logging import getLogger
 from queue import Empty
@@ -18,7 +19,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import InputFile
 from aiogram.utils.callback_data import CallbackData
 
-from .bot_answers import welcome_message
+from .bot_answers import *
 from ..model import MODEL_REGISTRY, ModelABC, VGG19Transfer
 
 logging.basicConfig(level=logging.INFO)
@@ -155,12 +156,20 @@ class RequestsQueue:
 class TransferBot:
     """Class of style transfer telegram Bot."""
 
-    def __init__(self, bot_token: str, timeout_seconds: int = 600, max_tasks: int = 2, max_retries_number: int = 3):
+    def __init__(
+            self,
+            bot_token: str,
+            timeout_seconds: int = 1000,
+            max_tasks: int = 2,
+            max_retries_number: int = 3,
+            slow_transfer_iters: int = 300,
+    ):
         """TransferBot constructor
 
         :param bot_token: telegram bot token.
         :param max_tasks: number of maximum tasks for parallel processing.
         :param max_retries_number: maximum number of retries if image processing is failed.
+        :param slow_transfer_iters: number of iterations for slow transfer.
         """
 
         self.max_retries_number = max_retries_number
@@ -171,6 +180,8 @@ class TransferBot:
 
         self.timeout_seconds = timeout_seconds
         self.queue = RequestsQueue()
+
+        self.slow_transfer_iters = slow_transfer_iters
 
     def _setup_handlers(self) -> tp.NoReturn:
         """Setup input messages handlers.."""
@@ -207,18 +218,20 @@ class TransferBot:
         LOGGER.info(f"Processing model selection for {request}.")
         if model_id == "OWN":
             style_request_message = await self.bot.edit_message_text(
-                text=f"Пришлите стиль ответным сообщением.",
+                text=reply_with_style_message.format(query=query, model_id=model_id),
                 reply_markup=None,
                 message_id=query.message.message_id,
                 chat_id=request.chat_id,
+                parse_mode='MarkdownV2',
             )
             request.put_in_cache(style_request_message.message_id)
         else:
             await self.bot.edit_message_text(
-                text=f"Выбрана модель {model_id}.",
+                text=choose_model_message.format(query=query, model_id=model_id),
                 reply_markup=None,
                 message_id=query.message.message_id,
                 chat_id=request.chat_id,
+                parse_mode='MarkdownV2',
             )
             await self.apply_style(request)
             await self.bot.delete_message(request.chat_id, query.message.message_id)
@@ -230,7 +243,7 @@ class TransferBot:
         queue = multiprocessing.Queue()
         # TODO: rewrite model getter maybe
         process_kwargs = {
-            "model_class": MODEL_REGISTRY.get(request.model_id, VGG19Transfer),
+            "model_class": MODEL_REGISTRY.get(request.model_id, partial(VGG19Transfer, num_steps=self.slow_transfer_iters)),
             "content_image": await self.download_image(request.content_file_id),
             "queue": queue,
         }
@@ -270,7 +283,7 @@ class TransferBot:
                     LOGGER.warning(f"{n_retries + 1} retry attempt is started.")
                 else:
                     LOGGER.error("Reached max_retries_number, image wont be processed.")
-                    await reply_message.edit_text("Ошибка при обработке, попробуйте ещё раз.")
+                    await reply_message.edit_text(error_message)
                     self.queue.remove(request)
                     # TODO: pop request from _CACHE maybe?
                     raise Exception("process is dead")
@@ -279,12 +292,12 @@ class TransferBot:
 
         await self.bot.delete_message(request.chat_id, reply_message.message_id)
         LOGGER.info(f"Sending result of {request}.")
-        result_message = f"Результат переноса стиля ({request.model_id if request.model_id != 'OWN' else 'Собственный стиль'}):"
         await self.bot.send_photo(
             chat_id=request.chat_id,
             photo=InputFile(transformed_image),
-            caption=result_message,
+            caption=result_message.format(request=request),
             reply_to_message_id=request.message_id,
+            parse_mode='MarkdownV2',
         )
         self.queue.remove(request)
 
@@ -308,9 +321,10 @@ class TransferBot:
         keyboard: InlineKeyboardMarkup = self.make_keyboard(request.message_id)
         await self.bot.send_message(
             chat_id=message.chat.id,
-            text=f"Выберите стиль:",
+            text=choose_style_message.format(message=message),
             reply_markup=keyboard,
             reply_to_message_id=message.message_id,
+            parse_mode='MarkdownV2',
         )
 
     async def _wait_in_queue(self, request: Request) -> types.Message:
@@ -319,8 +333,9 @@ class TransferBot:
         current_position = self.queue.get_position(request)
         reply_message = await self.bot.send_message(
             chat_id=request.chat_id,
-            text=f"Ваше фото {current_position} в очереди.",
+            text=queue_position_message.format(current_position=current_position),
             reply_to_message_id=request.message_id,
+            parse_mode='MarkdownV2',
         )
 
         while True:
@@ -328,13 +343,19 @@ class TransferBot:
             if position != current_position:
                 LOGGER.info(f"Request {request} is moved from {current_position} to {position}.")
                 current_position = position
-                reply_message = await reply_message.edit_text(f"Ваше фото {current_position} в очереди.")
+                reply_message = await reply_message.edit_text(
+                    queue_position_message.format(current_position=current_position),
+                    parse_mode='MarkdownV2',
+                )
             else:
                 await asyncio.sleep(1)
 
             if current_position <= self.max_tasks:
                 LOGGER.info(f"Start style transfering for {request}.")
-                reply_message = await reply_message.edit_text(f"Ваше фото обрабатывается.")
+                reply_message = await reply_message.edit_text(
+                    processing_message.format(request=request),
+                    parse_mode='MarkdownV2',
+                )
                 break
 
         return reply_message
@@ -361,7 +382,7 @@ class TransferBot:
             )
             keyboard.insert(button)
         button = InlineKeyboardButton(
-            "Ваш стиль",
+            own_style_message,
             callback_data=RequestAction.new(
                 model="OWN",
                 message_id=message_id,
