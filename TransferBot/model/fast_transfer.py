@@ -8,11 +8,10 @@ import numpy as np
 import torch
 from torchvision.transforms import transforms
 
-
-# TODO: maybe move it to class attributes
 from . import ModelABC
 from .feature_extraction import TransformerNet
 
+# TODO: maybe move it to class attributes
 imsize = (512, 512) if torch.cuda.is_available() else (256, 256)
 mean = np.array([0.485, 0.456, 0.406])
 std = np.array([0.229, 0.224, 0.225])
@@ -59,7 +58,7 @@ class MunkModel(PretrainedTransferModel, ModelABC):
 
     @property
     def check_point_path(self):
-        return "munk_last_checkpoint.pth"
+        return "munk_default.pth"
 
 
 class VanGoghModel(PretrainedTransferModel, ModelABC):
@@ -67,7 +66,7 @@ class VanGoghModel(PretrainedTransferModel, ModelABC):
 
     @property
     def check_point_path(self):
-        return "van_gog_last_checkpoint.pth"
+        return "van_gogh_default.pth"
 
 
 class KandinskyModel(PretrainedTransferModel, ModelABC):
@@ -75,7 +74,7 @@ class KandinskyModel(PretrainedTransferModel, ModelABC):
 
     @property
     def check_point_path(self):
-        return "kandinsky_last_checkpoint.pth"
+        return "kandinsky_default.pth"
 
 
 class MonetModel(PretrainedTransferModel, ModelABC):
@@ -83,7 +82,7 @@ class MonetModel(PretrainedTransferModel, ModelABC):
 
     @property
     def check_point_path(self):
-        return "mone2_4800.pth"
+        return "monet_default.pth"
 
 
 class PicassoModel(PretrainedTransferModel, ModelABC):
@@ -91,4 +90,4 @@ class PicassoModel(PretrainedTransferModel, ModelABC):
 
     @property
     def check_point_path(self):
-        return "best_model.pth"
+        return "picasso_default.pth"
