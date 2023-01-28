@@ -314,7 +314,6 @@ class TransferBot:
                     LOGGER.error("Reached max_retries_number, image wont be processed.")
                     await reply_message.edit_text(error_message, parse_mode="MarkdownV2")
                     self.queue.remove(request)
-                    # TODO: pop request from _CACHE maybe?
                     raise Exception("process is dead")
 
             await asyncio.sleep(1)
