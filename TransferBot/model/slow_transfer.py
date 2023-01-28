@@ -118,7 +118,7 @@ class VGG16Transfer(ModelABC):
 class VGG19Transfer(ModelABC):
     model_id: str = "VGG19"
 
-    def __init__(self, num_steps: int = 300):
+    def __init__(self, num_steps: int = 1000):
         super().__init__()
         self.cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(self.device)
         self.cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(self.device)
@@ -160,9 +160,9 @@ class VGG19Transfer(ModelABC):
             content_img,
             style_img,
             input_img,
-            num_steps=1000,
-            style_weight=100000,
-            content_weight=1
+            num_steps=5000,
+            style_weight=10000000,
+            content_weight=0.4
     ):
         """Run the style transfer."""
         LOGGER.info('Building the style transfer model..')

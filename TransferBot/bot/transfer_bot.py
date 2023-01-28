@@ -29,7 +29,7 @@ LOGGER.setLevel(logging.INFO)
 
 def _process_func(
         queue: multiprocessing.Queue,
-        model_class: type,
+        model_class: tp.Type[ModelABC],
         content_image: BytesIO,
         style_image: tp.Optional[BytesIO] = None) -> tp.NoReturn:
     """Function for processing image in separate process.
@@ -47,7 +47,7 @@ def _process_func(
 
 
 # TODO: LRU or smth with timeout
-_CACHE = {}
+_CACHE: tp.Dict[tp.Any, 'Request'] = {}
 
 RequestAction = CallbackData('r', 'model', 'message_id')
 
@@ -59,7 +59,7 @@ class StyleAnswerFilter(Filter):
         input_message = message.reply_to_message
         if input_message is None:
             return False
-        request: Request = Request.get_from_cache(message.chat.id, input_message.message_id)
+        request: tp.Optional[Request] = Request.get_from_cache(message.chat.id, input_message.message_id)
         return request is not None
 
 
@@ -103,7 +103,7 @@ class Request:
         return _CACHE.pop((str(chat_id), str(message_id)))
 
     @staticmethod
-    def get_from_cache(chat_id: int, message_id: int) -> "Request":
+    def get_from_cache(chat_id: int, message_id: int) -> tp.Optional["Request"]:
         """Get request from global cache.
 
         :param chat_id: chat of request
@@ -159,14 +159,15 @@ class TransferBot:
     def __init__(
             self,
             bot_token: str,
-            timeout_seconds: int = 1000,
+            timeout_seconds: int = 10000,
             max_tasks: int = 2,
             max_retries_number: int = 3,
-            slow_transfer_iters: int = 300,
+            slow_transfer_iters: int = 5000,
     ):
         """TransferBot constructor
 
         :param bot_token: telegram bot token.
+        :param timeout_seconds: timeout seconds of image processing.
         :param max_tasks: number of maximum tasks for parallel processing.
         :param max_retries_number: maximum number of retries if image processing is failed.
         :param slow_transfer_iters: number of iterations for slow transfer.
@@ -178,10 +179,10 @@ class TransferBot:
         self.dispatcher = Dispatcher(self.bot)
         self._setup_handlers()
 
-        self.timeout_seconds = timeout_seconds
-        self.queue = RequestsQueue()
+        self.timeout_seconds: int = timeout_seconds
+        self.queue: RequestsQueue = RequestsQueue()
 
-        self.slow_transfer_iters = slow_transfer_iters
+        self.slow_transfer_iters: int = slow_transfer_iters
 
     def _setup_handlers(self) -> tp.NoReturn:
         """Setup input messages handlers.."""
@@ -240,10 +241,11 @@ class TransferBot:
         """Apply style to user's image and send result."""
         reply_message = await self._wait_in_queue(request)
 
-        queue = multiprocessing.Queue()
+        queue: multiprocessing.Queue = multiprocessing.Queue()
         # TODO: rewrite model getter maybe
+        model_id: str = request.model_id
         process_kwargs = {
-            "model_class": MODEL_REGISTRY.get(request.model_id, partial(VGG19Transfer, num_steps=self.slow_transfer_iters)),
+            "model_class": MODEL_REGISTRY.get(model_id, partial(VGG19Transfer, num_steps=self.slow_transfer_iters)),
             "content_image": await self.download_image(request.content_file_id),
             "queue": queue,
         }
@@ -254,8 +256,6 @@ class TransferBot:
         process = multiprocessing.Process(target=_process_func, kwargs=process_kwargs, )
         process.start()
 
-        # TODO: improve timeout and n_retries
-        # TODO: save current process to cache and restore it after bot reload
         start_time = datetime.datetime.now()
         n_retries = 0
         while True:
