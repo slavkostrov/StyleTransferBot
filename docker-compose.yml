@@ -1,9 +1,5 @@
 version: "3"
 
-volumes:
-  cache_storage:
-    name: test_volume
-
 services:
   bot:
     build:
@@ -12,5 +8,5 @@ services:
     environment:
       - TG_STYLE_BOT_TOKEN=${TG_STYLE_BOT_TOKEN}
     volumes:
-      - "cache_storage:/storage"
+      - "./storage:/storage"
     restart: always
