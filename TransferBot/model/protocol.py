@@ -31,6 +31,7 @@ def resize_image(image: torch.tensor, size: image_size) -> torch.tensor:
 
 class ModelABC(ABC):
     """Abstract class for all of transfer style models."""
+    model_id: str = ""
 
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -53,10 +54,6 @@ class ModelABC(ABC):
 
         :return: Compose of transforms.
         """
-        pass
-
-    @abc.abstractmethod
-    def model_id(self) -> str:
         pass
 
     @staticmethod
