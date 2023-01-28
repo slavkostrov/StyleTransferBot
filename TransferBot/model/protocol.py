@@ -31,6 +31,7 @@ def resize_image(image: torch.tensor, size: image_size) -> torch.tensor:
 
 class ModelABC(ABC):
     """Abstract class for all of transfer style models."""
+
     model_id: str = ""
 
     def __init__(self):
@@ -39,7 +40,9 @@ class ModelABC(ABC):
         gc.collect()
 
     @abc.abstractmethod
-    def process_image(self, content_image: BytesIO, style_image: Optional[BytesIO] = None) -> BytesIO:
+    def process_image(
+        self, content_image: BytesIO, style_image: Optional[BytesIO] = None
+    ) -> BytesIO:
         """Process image, apply style to content or use pretrained style.
 
         :param content_image: image with content, will be stylized
@@ -83,4 +86,3 @@ class ModelABC(ABC):
         image_tensor = Variable(transform(image)).to(self.device)
         image_tensor = image_tensor.unsqueeze(0)
         return image_tensor, input_image_size
-

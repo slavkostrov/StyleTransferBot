@@ -13,8 +13,12 @@ class ResidualBlock(torch.nn.Module):
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
         self.block = nn.Sequential(
-            ConvBlock(channels, channels, kernel_size=3, stride=1, normalize=True, relu=True),
-            ConvBlock(channels, channels, kernel_size=3, stride=1, normalize=True, relu=False),
+            ConvBlock(
+                channels, channels, kernel_size=3, stride=1, normalize=True, relu=True
+            ),
+            ConvBlock(
+                channels, channels, kernel_size=3, stride=1, normalize=True, relu=False
+            ),
         )
 
     def forward(self, x):
@@ -22,11 +26,21 @@ class ResidualBlock(torch.nn.Module):
 
 
 class ConvBlock(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, upsample=False, normalize=True, relu=True):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        upsample=False,
+        normalize=True,
+        relu=True,
+    ):
         super(ConvBlock, self).__init__()
         self.upsample = upsample
         self.block = nn.Sequential(
-            nn.ReflectionPad2d(kernel_size // 2), nn.Conv2d(in_channels, out_channels, kernel_size, stride)
+            nn.ReflectionPad2d(kernel_size // 2),
+            nn.Conv2d(in_channels, out_channels, kernel_size, stride),
         )
         self.norm = nn.InstanceNorm2d(out_channels, affine=True) if normalize else None
         self.relu = relu
@@ -64,18 +78,12 @@ class TransformerNet(torch.nn.Module):
 
 
 class Vgg16(torch.nn.Module):
-
     def __init__(self):
         super(Vgg16, self).__init__()
 
         vgg_pretrained_features = models.vgg16(pretrained=True).features
 
-        features_slices_ranges = [
-            (0, 4),
-            (4, 9),
-            (9, 16),
-            (16, 23)
-        ]
+        features_slices_ranges = [(0, 4), (4, 9), (9, 16), (16, 23)]
 
         self.features_slices = []
         for slice_id, (start, end) in enumerate(features_slices_ranges):
@@ -96,11 +104,11 @@ class Vgg16(torch.nn.Module):
 
 
 def get_style_model_and_losses(
-        cnn,
-        normalization_mean,
-        normalization_std,
-        style_img,
-        content_img,
+    cnn,
+    normalization_mean,
+    normalization_std,
+    style_img,
+    content_img,
 ):
     normalization = Normalization(normalization_mean, normalization_std).to(device)
     content_losses = []
@@ -111,27 +119,29 @@ def get_style_model_and_losses(
     for layer in cnn.children():
         if isinstance(layer, nn.Conv2d):
             i += 1
-            name = 'conv_{}'.format(i)
+            name = "conv_{}".format(i)
         elif isinstance(layer, nn.ReLU):
-            name = 'relu_{}'.format(i)
+            name = "relu_{}".format(i)
             layer = nn.ReLU(inplace=False)
         elif isinstance(layer, nn.MaxPool2d):
-            name = 'pool_{}'.format(i)
+            name = "pool_{}".format(i)
         elif isinstance(layer, nn.BatchNorm2d):
-            name = 'bn_{}'.format(i)
+            name = "bn_{}".format(i)
         else:
-            raise RuntimeError('Unrecognized layer: {}'.format(layer.__class__.__name__))
+            raise RuntimeError(
+                "Unrecognized layer: {}".format(layer.__class__.__name__)
+            )
 
         model.add_module(name, layer)
 
-        if name in ['conv_4']:
+        if name in ["conv_4"]:
             # add content loss:
             target = model(content_img.to(device)).detach()
             content_loss = ContentLoss(target)
             model.add_module("content_loss_{}".format(i), content_loss)
             content_losses.append(content_loss)
 
-        if name in ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']:
+        if name in ["conv_1", "conv_2", "conv_3", "conv_4", "conv_5"]:
             # add style loss:
             target_feature = model(style_img.to(device)).detach()
             style_loss = StyleLoss(target_feature)
@@ -142,6 +152,6 @@ def get_style_model_and_losses(
         if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
             break
 
-    model = model[:(i + 1)]
+    model = model[: (i + 1)]
 
     return model, style_losses, content_losses
