@@ -443,6 +443,7 @@ class TransferBot:
         """Startup preparation.
         Load previous requests from local cache"""
         if os.path.exists(_CACHE_PATH):
+            LOGGER.info(f"Load cache from {_CACHE_PATH}.")
             with open(_CACHE_PATH, "rb") as file:
                 global _CACHE
                 _CACHE = pickle.load(file)
@@ -452,4 +453,5 @@ class TransferBot:
         Save active (w/o answers) requests to cache."""
         LOGGER.info("Saving _CACHE to pkl.")
         with open(_CACHE_PATH, "wb") as file:
+            LOGGER.info(f"Write cache into {_CACHE_PATH}.")
             pickle.dump(_CACHE, file)
