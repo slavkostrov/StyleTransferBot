@@ -4,9 +4,7 @@ on: push
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.8
@@ -24,11 +22,9 @@ jobs:
       - name: Lint with mypy
         run: |
           mypy TransferBot
-        continue-on-error: true
+        continue-on-error: true # TODO: change to false
       - name: Install package
         run: pip install -e .
       - name: Unit tests with pytest
         run: |
           pytest ./tests
-        continue-on-error: false
-# TODO: delete continue-on-error
