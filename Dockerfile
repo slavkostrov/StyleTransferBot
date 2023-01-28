@@ -25,4 +25,4 @@ COPY run.py /codebase/run.py
 RUN pip3 install -r /codebase/requirements.txt
 RUN pip3 install -e /codebase
 
-CMD ["python3", "run.py"]
+CMD ["python3", "/codebase/run.py"]
