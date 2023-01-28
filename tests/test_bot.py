@@ -8,7 +8,7 @@ from PIL import Image
 
 from TransferBot.bot import TransferBot
 from TransferBot.bot import bot_answers
-from TransferBot.model import MODEL_REGISTRY
+from TransferBot.model import MODEL_REGISTRY, VGG19Transfer
 from TransferBot.model.protocol import resize_image
 
 test_data_path = Path(__file__).parent / "test_data"
@@ -57,3 +57,20 @@ def test_pretrained_models_sizes(model_class):
 
     assert input_size[0] == pytest.approx(result_size[0], 10)
     assert input_size[1] == pytest.approx(result_size[1], 10)
+
+
+@pytest.mark.slowtest
+def test_slow_transfer():
+    content_image_path = test_data_path / "1.jpg"
+    style_image_path = test_data_path / "2.jpg"
+
+    with open(content_image_path, "rb") as fh:
+        content_image = BytesIO(fh.read())
+
+    with open(style_image_path, "rb") as fh:
+        style_image = BytesIO(fh.read())
+
+    model = VGG19Transfer(num_steps=50)
+    result_image = model.process_image(content_image, style_image)
+
+    assert isinstance(result_image, BytesIO)

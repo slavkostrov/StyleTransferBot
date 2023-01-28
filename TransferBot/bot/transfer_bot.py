@@ -28,10 +28,10 @@ LOGGER.setLevel(logging.INFO)
 
 
 def _process_func(
-        queue: multiprocessing.Queue,
-        model_class: tp.Type[ModelABC],
-        content_image: BytesIO,
-        style_image: tp.Optional[BytesIO] = None,
+    queue: multiprocessing.Queue,
+    model_class: tp.Type[ModelABC],
+    content_image: BytesIO,
+    style_image: tp.Optional[BytesIO] = None,
 ) -> tp.NoReturn:
     """Function for processing image in separate process.
 
@@ -168,12 +168,12 @@ class TransferBot:
     """Class of style transfer telegram Bot."""
 
     def __init__(
-            self,
-            bot_token: str,
-            timeout_seconds: int = 10000,
-            max_tasks: int = 2,
-            max_retries_number: int = 3,
-            slow_transfer_iters: int = 5000,
+        self,
+        bot_token: str,
+        timeout_seconds: int = 10000,
+        max_tasks: int = 2,
+        max_retries_number: int = 3,
+        slow_transfer_iters: int = 5000,
     ):
         """TransferBot constructor
 
