@@ -62,7 +62,7 @@ class PretrainedTransferModel(ModelABC):
 
 
 class MunkModel(PretrainedTransferModel, ModelABC):
-    model_id: str = "Munk"
+    model_id: str = "Munk 😱"
 
     @property
     def check_point_path(self):
@@ -70,7 +70,7 @@ class MunkModel(PretrainedTransferModel, ModelABC):
 
 
 class VanGoghModel(PretrainedTransferModel, ModelABC):
-    model_id: str = "Van Gogh"
+    model_id: str = "Van Gogh 🌃"
 
     @property
     def check_point_path(self):
@@ -78,7 +78,7 @@ class VanGoghModel(PretrainedTransferModel, ModelABC):
 
 
 class KandinskyModel(PretrainedTransferModel, ModelABC):
-    model_id: str = "Kandinsky"
+    model_id: str = "Kandinsky 🌈"
 
     @property
     def check_point_path(self):
@@ -86,7 +86,7 @@ class KandinskyModel(PretrainedTransferModel, ModelABC):
 
 
 class MonetModel(PretrainedTransferModel, ModelABC):
-    model_id = "Monet"
+    model_id = "Monet 🌄"
 
     @property
     def check_point_path(self):
@@ -94,7 +94,7 @@ class MonetModel(PretrainedTransferModel, ModelABC):
 
 
 class PicassoModel(PretrainedTransferModel, ModelABC):
-    model_id: str = "Picasso"
+    model_id: str = "Picasso 👀"
 
     @property
     def check_point_path(self):
