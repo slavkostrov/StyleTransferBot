@@ -25,4 +25,5 @@ COPY run.py /codebase/run.py
 
 RUN pip3 install -e /codebase
 
-CMD ["python3", "/codebase/run.py"]
+STOPSIGNAL SIGINT
+ENTRYPOINT ["python3", "/codebase/run.py"]
