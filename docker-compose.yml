@@ -7,7 +7,6 @@ services:
       dockerfile: Dockerfile
     environment:
       - TG_STYLE_BOT_TOKEN=${TG_STYLE_BOT_TOKEN}
-    # volumes:
-    #  - "/codebase:/codebase"
-    #  - "/storage:/storage"
+    volumes:
+      - "/storage:/storage"
     restart: always
