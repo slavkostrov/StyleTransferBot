@@ -246,7 +246,7 @@ class TransferBot:
         request.model_id = model_id
 
         LOGGER.info(f"Processing model selection for {request}.")
-        if model_id == "OWN":
+        if model_id == "Your style":
             style_request_message = await self.bot.edit_message_text(
                 text=reply_with_style_message.format(query=query, model_id=model_id),
                 reply_markup=None,
@@ -428,7 +428,7 @@ class TransferBot:
         button = InlineKeyboardButton(
             own_style_message,
             callback_data=RequestAction.new(
-                model="OWN",
+                model="Your style",
                 message_id=message_id,
             ),
         )
