@@ -13,15 +13,16 @@ ENV TG_STYLE_BOT_TOKEN ${TG_STYLE_BOT_TOKEN}
 RUN apt-get update
 RUN apt-get install -y python3 python3-pip python-dev build-essential python3-venv
 
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
 RUN mkdir -p /codebase /storage
 WORKDIR /codebase
 
-COPY requirements.txt /codebase/requirements.txt
-COPY TransferBot /codebase/TransferBot
 COPY setup.py /codebase/setup.py
+COPY TransferBot /codebase/TransferBot
 COPY run.py /codebase/run.py
 
-RUN pip3 install -r /codebase/requirements.txt
 RUN pip3 install -e /codebase
 
 CMD ["python3", "/codebase/run.py"]
