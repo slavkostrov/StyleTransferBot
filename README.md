@@ -122,6 +122,8 @@ for install linters hooks.
 <a name="runtime"><h3>Runtime examples:</h3></a>
 * TBD
 
+## Links
+[Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://arxiv.org/pdf/1603.08155.pdf)
 
 ## Contacts ☎️:
 
