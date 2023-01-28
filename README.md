@@ -4,6 +4,17 @@ This package introduces implementation of Machine Learning Telegram bot, that co
 These techniques (include slow style transfer and pretrained fast transfer models) can be used for transferring any styles
 onto user's images.
 
+### Install:
+
+To install package you need to clone repo and setup dependencies from requirements:
+
+```shell
+git clone https://github.com/slavkostrov/StyleTransferBot.git
+cd StyleTransferBot
+pip install -r requirements.txt
+pip install -e .
+```
+
 ### Usage example (see [run.py](run.py)):
 
 ```python
