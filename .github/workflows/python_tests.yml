@@ -18,7 +18,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install black mypy pytest
-          pip install -e .
       - name: Check PEP8 compliance
         run: |
           black --check --verbose TransferBot
@@ -27,6 +26,8 @@ jobs:
         run: |
           mypy TransferBot
         continue-on-error: true
+      - name: Install package
+        run: pip install -e .
       - name: Unit tests with pytest
         run: |
           pytest ./tests
