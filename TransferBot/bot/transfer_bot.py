@@ -312,7 +312,9 @@ class TransferBot:
                     LOGGER.warning(f"{n_retries + 1} retry attempt is started.")
                 else:
                     LOGGER.error("Reached max_retries_number, image wont be processed.")
-                    await reply_message.edit_text(error_message, parse_mode="MarkdownV2")
+                    await reply_message.edit_text(
+                        error_message, parse_mode="MarkdownV2"
+                    )
                     self.queue.remove(request)
                     raise Exception("process is dead")
 
