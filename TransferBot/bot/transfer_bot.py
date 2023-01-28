@@ -15,12 +15,12 @@ from queue import Empty
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters import Filter
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types.input_file import InputFile
 from aiogram.utils.callback_data import CallbackData
 
-from .bot_answers import *
 from ..model import MODEL_REGISTRY, ModelABC, VGG19Transfer
+from .bot_answers import *
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = getLogger("transfer_bot.py")
@@ -208,6 +208,7 @@ class TransferBot:
             self.process_content_photo, content_types=["photo"]
         )
         self.dispatcher.register_callback_query_handler(self.process_model_selection)
+        self.dispatcher.register_message_handler(self.unknown_handler)
         LOGGER.info("Handlers setup is ended.")
 
     def run(self) -> tp.NoReturn:
@@ -225,6 +226,14 @@ class TransferBot:
         LOGGER.info(f"Sending welcome message to {message.chat.id}.")
         await message.reply(
             welcome_message.format(message=message), parse_mode="MarkdownV2"
+        )
+
+    @staticmethod
+    async def unknown_handler(message: types.Message) -> tp.NoReturn:
+        """Process unknowm message types."""
+        LOGGER.info(f"Got unknown message type from {message.chat.id}.")
+        await message.reply(
+            unknown_message.format(message=message), parse_mode="MarkdownV2"
         )
 
     async def process_model_selection(self, query: types.CallbackQuery) -> tp.NoReturn:
