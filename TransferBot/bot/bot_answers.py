@@ -15,3 +15,4 @@ result_message = "Результат переноса стиля \({request.mode
 queue_position_message = "Ваше фото {current_position} в очереди\."
 processing_message = "Ваше фото обрабатывается\."
 own_style_message = "Ваш стиль"
+unknown_message = "Пришлите изображение либо воспользуйтесь командами //start и //end/."
