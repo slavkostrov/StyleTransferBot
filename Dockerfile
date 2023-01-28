@@ -25,5 +25,6 @@ COPY run.py /codebase/run.py
 
 RUN pip3 install -e /codebase
 
-STOPSIGNAL SIGINT # need it to call on_shutdown bot's method
+# need it to call on_shutdown bot's method
+STOPSIGNAL SIGINT
 ENTRYPOINT ["python3", "/codebase/run.py"]
