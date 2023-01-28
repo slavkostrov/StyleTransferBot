@@ -8,7 +8,8 @@ from .fast_transfer import MunkModel, MonetModel, KandinskyModel, VanGoghModel
 from .slow_transfer import VGG16Transfer, VGG19Transfer
 
 MODEL_REGISTRY: tp.Dict[str, tp.Type[ModelABC]] = {
-    value.model_id: value for value in ModelABC.__subclasses__()
+    value.model_id: value
+    for value in ModelABC.__subclasses__()
     if not isabstract(value) and "VGG" not in value.__name__
 }
 
@@ -20,9 +21,8 @@ def register_model(model_class: type, model_id: str) -> tp.NoReturn:
     :param model_id: model_id, string name for model.
     :return: None
     """
-    if (
-            not all(hasattr(model_class, name) for name in dir(ModelABC) if not name.startswith("_"))
-            or isabstract(model_class)
-    ):
+    if not all(
+        hasattr(model_class, name) for name in dir(ModelABC) if not name.startswith("_")
+    ) or isabstract(model_class):
         raise TypeError("model_class must be inherited from ModelABC.")
     MODEL_REGISTRY[model_id] = model_class

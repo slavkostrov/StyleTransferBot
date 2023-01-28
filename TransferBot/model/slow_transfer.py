@@ -32,15 +32,17 @@ class VGG16Transfer(ModelABC):
     model_id: str = "VGG16"
 
     epochs: int = field(default=150)
-    default_image_size: tp.Union[float, tp.Tuple[float]] = field(default=256.)
+    default_image_size: tp.Union[float, tp.Tuple[float]] = field(default=256.0)
 
     batch_size: int = field(default=1)
     learning_rate: float = field(default=0.01)
-    content_weight: float = field(default=1.)
+    content_weight: float = field(default=1.0)
     style_weight: float = field(default=1e9)
-    tv_weight: float = field(default=2.)
+    tv_weight: float = field(default=2.0)
 
-    device: str = field(default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu")
+    device: str = field(
+        default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu"
+    )
     vgg: torch.nn.Module = field(default_factory=Vgg16)
 
     def __post_init__(self):
@@ -48,16 +50,20 @@ class VGG16Transfer(ModelABC):
         LOGGER.info(f"model is loaded. using device {self.device}.")
 
     def get_transforms(self) -> transforms.Compose:
-        return transforms.Compose([
-            transforms.Resize(self.default_image_size),
-            transforms.ToTensor(),
-        ])
+        return transforms.Compose(
+            [
+                transforms.Resize(self.default_image_size),
+                transforms.ToTensor(),
+            ]
+        )
 
     def get_features(self, img):
         img = img.to(self.device)
         return self.vgg.to(self.device)(img)
 
-    def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
+    def process_image(
+        self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None
+    ) -> BytesIO:
         if style_image is None:
             raise RuntimeError("style_image must be defined.")
 
@@ -65,7 +71,9 @@ class VGG16Transfer(ModelABC):
         content_img, content_size = self.load_image(content_image)
         style_img, _ = self.load_image(style_image)
         LOGGER.debug("Getting features from model.")
-        features_style, features_content = self.get_features(style_img), self.get_features(content_img)
+        features_style, features_content = self.get_features(
+            style_img
+        ), self.get_features(content_img)
         LOGGER.debug("Got features from model.")
 
         gram_style = [gram_matrix(y) for y in features_style]
@@ -77,6 +85,7 @@ class VGG16Transfer(ModelABC):
 
         LOGGER.info("Style transfer is started.")
         for epoch in torch.arange(self.epochs):
+
             def closure():
                 optimizer.zero_grad()
                 y.data.clamp_(0, 1)
@@ -93,19 +102,22 @@ class VGG16Transfer(ModelABC):
 
                 content_loss = self.content_weight * mse_loss(fc, fy)
 
-                tv_loss = self.tv_weight * (torch.sum(torch.abs(y[:, :, :, :-1] - y[:, :, :, 1:])) +
-                                            torch.sum(torch.abs(y[:, :, :-1, :] - y[:, :, 1:, :])))
+                tv_loss = self.tv_weight * (
+                    torch.sum(torch.abs(y[:, :, :, :-1] - y[:, :, :, 1:]))
+                    + torch.sum(torch.abs(y[:, :, :-1, :] - y[:, :, 1:, :]))
+                )
 
                 total_loss = content_loss + style_loss + tv_loss
                 total_loss.backward(retain_graph=True)
 
                 if epoch % 100 == 0:
-                    LOGGER.info("Epoch {}: Style Loss : {:4f} Content Loss: {:4f} TV Loss: {:4f}".format(
-                        epoch,
-                        style_loss,
-                        content_loss,
-                        tv_loss,
-                    )
+                    LOGGER.info(
+                        "Epoch {}: Style Loss : {:4f} Content Loss: {:4f} TV Loss: {:4f}".format(
+                            epoch,
+                            style_loss,
+                            content_loss,
+                            tv_loss,
+                        )
                     )
 
                 return total_loss
@@ -120,18 +132,19 @@ class VGG19Transfer(ModelABC):
 
     def __init__(self, num_steps: int = 1000):
         super().__init__()
-        self.cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(self.device)
+        self.cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(
+            self.device
+        )
         self.cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(self.device)
         self.cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
         self.num_steps = num_steps
 
     def get_transforms(self) -> transforms.Compose:
-        return transforms.Compose([
-            transforms.Resize(imsize),
-            transforms.ToTensor()]
-        )
+        return transforms.Compose([transforms.Resize(imsize), transforms.ToTensor()])
 
-    def process_image(self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None) -> BytesIO:
+    def process_image(
+        self, content_image: BytesIO, style_image: tp.Optional[BytesIO] = None
+    ) -> BytesIO:
         if style_image is None:
             raise RuntimeError("style_image must be defined.")
 
@@ -154,24 +167,20 @@ class VGG19Transfer(ModelABC):
         return optimizer
 
     def run_style_transfer(
-            self,
-            normalization_mean,
-            normalization_std,
-            content_img,
-            style_img,
-            input_img,
-            num_steps=5000,
-            style_weight=10000000,
-            content_weight=0.4
+        self,
+        normalization_mean,
+        normalization_std,
+        content_img,
+        style_img,
+        input_img,
+        num_steps=5000,
+        style_weight=10000000,
+        content_weight=0.4,
     ):
         """Run the style transfer."""
-        LOGGER.info('Building the style transfer model..')
+        LOGGER.info("Building the style transfer model..")
         model, style_losses, content_losses = get_style_model_and_losses(
-            self.cnn,
-            normalization_mean,
-            normalization_std,
-            style_img,
-            content_img
+            self.cnn, normalization_mean, normalization_std, style_img, content_img
         )
 
         input_img.requires_grad_(True)
@@ -179,7 +188,7 @@ class VGG19Transfer(ModelABC):
 
         optimizer = self.get_input_optimizer(input_img)
 
-        LOGGER.info('Optimizing..')
+        LOGGER.info("Optimizing..")
         run = [0]
         while run[0] <= num_steps:
 
@@ -207,7 +216,10 @@ class VGG19Transfer(ModelABC):
                 if run[0] % 50 == 0:
                     LOGGER.info("run {}:".format(run))
                     LOGGER.info(
-                        'Style Loss : {:4f} Content Loss: {:4f}'.format(style_score.item(), content_score.item()))
+                        "Style Loss : {:4f} Content Loss: {:4f}".format(
+                            style_score.item(), content_score.item()
+                        )
+                    )
 
                 return style_score + content_score
 

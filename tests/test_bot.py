@@ -14,8 +14,10 @@ async def test_echo_handler():
     message_mock = AsyncMock(text="/start", chat=chat_mock)
 
     await TransferBot.send_welcome(message=message_mock)
-    message_mock.reply.assert_called_with(bot_answers.welcome_message.format(message=message_mock),
-                                          parse_mode='MarkdownV2')
+    message_mock.reply.assert_called_with(
+        bot_answers.welcome_message.format(message=message_mock),
+        parse_mode="MarkdownV2",
+    )
 
 
 def test_image_resize():

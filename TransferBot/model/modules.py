@@ -5,7 +5,6 @@ from torch import nn
 
 
 class ContentLoss(nn.Module):
-
     def __init__(self, target: torch.tensor):
         super(ContentLoss, self).__init__()
         self.target = target.detach()
@@ -16,7 +15,6 @@ class ContentLoss(nn.Module):
 
 
 class StyleLoss(nn.Module):
-
     def __init__(self, target_feature: torch.tensor):
         super(StyleLoss, self).__init__()
         self.target = self.gram_matrix(target_feature).detach()
