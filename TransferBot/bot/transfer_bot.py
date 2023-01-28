@@ -208,6 +208,7 @@ class TransferBot:
             self.process_content_photo, content_types=["photo"]
         )
         self.dispatcher.register_callback_query_handler(self.process_model_selection)
+        self.dispatcher.register_message_handler(self.unknown_handler)
         LOGGER.info("Handlers setup is ended.")
 
     def run(self) -> tp.NoReturn:
