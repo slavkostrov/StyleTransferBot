@@ -49,6 +49,7 @@ def _process_func(
 
 # TODO: LRU or smth with timeout
 _CACHE: tp.Dict[tp.Any, "Request"] = {}
+_CACHE_PATH: str = "/storage/_cache.pkl" if os.path.exists("/storage") else "_cache.pkl"
 
 RequestAction = CallbackData("r", "model", "message_id")
 
@@ -441,8 +442,8 @@ class TransferBot:
     async def on_startup(self, *args):
         """Startup preparation.
         Load previous requests from local cache"""
-        if os.path.exists("_cache.pkl"):
-            with open("_cache.pkl", "rb") as file:
+        if os.path.exists(_CACHE_PATH):
+            with open(_CACHE_PATH, "rb") as file:
                 global _CACHE
                 _CACHE = pickle.load(file)
 
@@ -450,5 +451,5 @@ class TransferBot:
         """Shutdown preparation.
         Save active (w/o answers) requests to cache."""
         LOGGER.info("Saving _CACHE to pkl.")
-        with open("_cache.pkl", "wb") as file:
+        with open(_CACHE_PATH, "wb") as file:
             pickle.dump(_CACHE, file)
