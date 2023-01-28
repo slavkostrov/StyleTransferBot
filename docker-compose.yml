@@ -8,5 +8,5 @@ services:
     environment:
       - TG_STYLE_BOT_TOKEN=${TG_STYLE_BOT_TOKEN}
     volumes:
-      - "/storage:/storage"
+      - "cache_storage:/storage"
     restart: always
