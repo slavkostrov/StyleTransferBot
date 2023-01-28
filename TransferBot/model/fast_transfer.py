@@ -15,6 +15,7 @@ from .feature_extraction import TransformerNet
 imsize = (512, 512) if torch.cuda.is_available() else (256, 256)
 mean = np.array([0.485, 0.456, 0.406])
 std = np.array([0.229, 0.224, 0.225])
+device = torch.device('cpu') if not torch.cuda.is_available() else torch.device('cuda')
 
 
 class PretrainedTransferModel(ModelABC):
@@ -27,7 +28,7 @@ class PretrainedTransferModel(ModelABC):
         checkpoint_path = Path(__file__).parent.joinpath(f"checkpoints/{self.check_point_path}")
 
         self.transformer = TransformerNet().to(self.device)
-        self.transformer.load_state_dict(torch.load(checkpoint_path))
+        self.transformer.load_state_dict(torch.load(checkpoint_path, map_location=device))
         self.transformer.eval()
 
     def get_transforms(self) -> transforms.Compose:
