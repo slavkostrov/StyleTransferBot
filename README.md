@@ -1,6 +1,17 @@
 # StyleTransferBot 🖼️
 
-## Description ✉:
+* [Description](#description)
+* [Install](#install)
+* [Usage](#usage)
+* [Deploy with Docker](#docker)
+* [Advanced options](#advanced)
+* [Tests](#tests)
+* [Development](#dev)
+* [Examples](#runtime)
+
+
+
+<a name="description"><h2>Description ✉:</h2></a>
 
 This package introduces implementation of Machine Learning Telegram bot, that contains transfer style techniques.
 These techniques (include slow style transfer and pretrained fast transfer models) can be used for transferring any styles
@@ -26,7 +37,7 @@ the bot can continue the user's dialogue (see on_setup, on_shutdown methods in [
 
 Examples are collected in the corresponding section of README.
 
-### Install 🔨:
+<a name="install"><h3>Install 🔨:</h3></a>
 
 To install package you need to clone repo and setup dependencies from requirements:
 
@@ -37,7 +48,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Usage example (see [run.py](run.py)):
+<a name="usage"><h3>Usage example (see [run.py](run.py)):</h3></a>
 
 ```python
 import os
@@ -54,7 +65,7 @@ if __name__ == "__main__":
     bot.run()
 ```
 
-### Deploy with Docker 📦:
+<a name="docker"><h3>Deploy with Docker 📦:</h3></a>
 
 1. Clone this repo.
 2. Write an `.env` file with your `TG_STYLE_BOT_TOKEN` in it.
@@ -63,7 +74,8 @@ so you can edit if you want to.
 
 That's it. Enjoy your dockerized transfer style bot everywhere. 🚀
 
-### Advanced options 🧘:
+<a name="advanced"><h3>Advanced options 🧘:</h3></a>
+
 * **Custom models**
 
 You can write your own model, that will implement `TransferBot.model.ModelABC` interface.
@@ -84,7 +96,7 @@ You can find it in [bot_answers.py](./TransferBot/bot/bot_answers.py).
 
 After that you'll see your model in bot keyboard.
 
-### Tests 🧪:
+<a name="tests"><h3>Tests 🧪:</h3></a>
 
 Package contains several tests, which you can find in `/tests` directory.
 To run them, you just need to write a few commands:
@@ -96,7 +108,7 @@ pip install pytest              # install pytest
 pytest testing/                 # run tests
 ```
 
-### Development 👨‍💻:
+<a name="dev"><h3>Development 👨‍💻:</h3></a>
 
 Before starting development please run:
 
@@ -107,7 +119,7 @@ pre-commit install
 
 for install linters hooks.
 
-### Runtime examples:
+<a name="runtime"><h3>Runtime examples:</h3></a>
 * TBD
 
 
