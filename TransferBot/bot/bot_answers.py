@@ -15,5 +15,5 @@ result_message = "Style transfer result \({request.model_id}\)\:"
 queue_position_message = "Your photo is {current_position} in line\."
 
 processing_message = "Your photo is being processed\."
-own_style_message = "Your style"
+own_style_message = "Your style 🎨"
 unknown_message = "Send an image or use the commands \/start and \/help\."

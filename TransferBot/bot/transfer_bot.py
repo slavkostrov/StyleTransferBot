@@ -428,7 +428,7 @@ class TransferBot:
         button = InlineKeyboardButton(
             own_style_message,
             callback_data=RequestAction.new(
-                model="Your style",
+                model="Your style 🎨",
                 message_id=message_id,
             ),
         )
