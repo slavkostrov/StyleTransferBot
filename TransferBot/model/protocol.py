@@ -8,7 +8,7 @@ from typing import Optional, Tuple, TypeVar
 import torch
 from PIL import Image
 from torch.autograd import Variable
-from torchvision.transforms import transforms, Compose
+from torchvision.transforms import Compose, transforms
 from torchvision.utils import save_image
 
 image_size = TypeVar("image_size", int, Tuple[int])
@@ -33,6 +33,8 @@ class ModelABC(ABC):
     """Abstract class for all of transfer style models."""
 
     model_id: str = ""
+    train_image_path: Optional[str] = None
+    description: Optional[str] = None
 
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

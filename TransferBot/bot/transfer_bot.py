@@ -199,9 +199,8 @@ class TransferBot:
     def _setup_handlers(self) -> tp.NoReturn:
         """Setup input messages handlers.."""
         LOGGER.info("Setup handlers.")
-        self.dispatcher.register_message_handler(
-            self.send_welcome, commands=["start", "help"]
-        )
+        self.dispatcher.register_message_handler(self.send_welcome, commands=["start"])
+        self.dispatcher.register_message_handler(self.help_handler, commands=["help"])
         self.dispatcher.register_message_handler(
             self.process_style_photo, StyleAnswerFilter(), content_types=["photo"]
         )
@@ -228,6 +227,26 @@ class TransferBot:
         await message.reply(
             welcome_message.format(message=message), parse_mode="MarkdownV2"
         )
+
+    @staticmethod
+    async def help_handler(message: types.Message) -> tp.NoReturn:
+        """Send help message to user."""
+        LOGGER.info(f"Sending welcome message to {message.chat.id}.")
+        media = types.MediaGroup()
+        description = []
+        for i, (model_id, model) in enumerate(MODEL_REGISTRY.items(), start=1):
+            if model.train_image_path is None:
+                continue
+            media.attach_photo(InputFile(model.train_image_path))
+            description.append(f"{i}\. {model_id} \- {model.description}\n")
+        description = "".join(description)
+        result_help_message = help_message.format(
+            description=description, own_style_message=own_style_message
+        )
+        reply_message = await message.reply(
+            result_help_message, parse_mode="MarkdownV2"
+        )
+        await reply_message.reply_media_group(media)
 
     @staticmethod
     async def unknown_handler(message: types.Message) -> tp.NoReturn:

@@ -17,6 +17,8 @@ mean = np.array([0.485, 0.456, 0.406])
 std = np.array([0.229, 0.224, 0.225])
 device = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
 
+images_path = Path(__file__).parent / "images"
+
 
 class PretrainedTransferModel(ModelABC):
     def __init__(self):
@@ -63,6 +65,7 @@ class PretrainedTransferModel(ModelABC):
 
 class MunkModel(PretrainedTransferModel, ModelABC):
     model_id: str = "Munk 😱"
+    train_image_path: str = images_path / "munk.jpg"
 
     @property
     def check_point_path(self):
@@ -71,6 +74,7 @@ class MunkModel(PretrainedTransferModel, ModelABC):
 
 class VanGoghModel(PretrainedTransferModel, ModelABC):
     model_id: str = "Van Gogh 🌃"
+    train_image_path: str = images_path / "van_gogh.jpg"
 
     @property
     def check_point_path(self):
@@ -79,6 +83,7 @@ class VanGoghModel(PretrainedTransferModel, ModelABC):
 
 class KandinskyModel(PretrainedTransferModel, ModelABC):
     model_id: str = "Kandinsky 🌈"
+    train_image_path: str = images_path / "kandinsky.jpg"
 
     @property
     def check_point_path(self):
@@ -87,6 +92,7 @@ class KandinskyModel(PretrainedTransferModel, ModelABC):
 
 class MonetModel(PretrainedTransferModel, ModelABC):
     model_id = "Monet 🌄"
+    train_image_path: str = images_path / "monet.jpg"
 
     @property
     def check_point_path(self):
@@ -95,6 +101,7 @@ class MonetModel(PretrainedTransferModel, ModelABC):
 
 class PicassoModel(PretrainedTransferModel, ModelABC):
     model_id: str = "Picasso 👀"
+    train_image_path: str = images_path / "picasso.jpg"
 
     @property
     def check_point_path(self):
