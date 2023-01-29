@@ -24,7 +24,7 @@ Package structure:
   * `TransferBot` - main class of bot implementation, encapsulate `aiogram` bot class, setup handlers etc.
 * `model` package:
   * `slow_transfer` module - contains implementations of slow style transfer algorithm.
-  * `fast_transfer` module - contains implementations of pretrained style transfer models.
+  * `fast_transfer` module - contains implementations of pretrained style transfer models (train code and logs available in [notebook](notebooks/[dls_project]training.ipynb)).
 
 The bot is written using the aiogram asynchronous library.
 The bot contains handlers for arriving at the input of images.
@@ -122,7 +122,10 @@ pre-commit install
 for install linters hooks.
 
 <a name="runtime"><h3>Runtime examples:</h3></a>
-* TBD
+![изображение](https://user-images.githubusercontent.com/64536258/215319150-660e8efd-efd4-4226-9047-a190880682ea.png)
+![изображение](https://user-images.githubusercontent.com/64536258/215319727-9090f25a-e9c8-43db-b23f-f75c6c5c00c0.png)
+
+
 
 ## Links
 [Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://arxiv.org/pdf/1603.08155.pdf)
