@@ -123,6 +123,8 @@ for install linters hooks.
 
 <a name="runtime"><h3>Runtime examples:</h3></a>
 ![изображение](https://user-images.githubusercontent.com/64536258/215319150-660e8efd-efd4-4226-9047-a190880682ea.png)
+![изображение](https://user-images.githubusercontent.com/64536258/215319727-9090f25a-e9c8-43db-b23f-f75c6c5c00c0.png)
+
 
 
 ## Links
