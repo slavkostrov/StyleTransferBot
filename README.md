@@ -16,7 +16,7 @@ You can enjoy bot here - [@ThroughTheEyesOfArtistsBot](https://t.me/ThroughTheEy
 <a name="description"><h2>Description ✉:</h2></a>
 
 This package introduces implementation of Machine Learning Telegram bot, that contains transfer style techniques.
-These techniques (include slow style transfer and pretrained fast transfer models) can be used for transferring any styles
+These techniques (include slow style transfer, pretrained fast transfer models and CycleGAN) can be used for transferring any styles
 onto user's images.
 
 Package structure:
@@ -25,6 +25,7 @@ Package structure:
 * `model` package:
   * `slow_transfer` module - contains implementations of slow style transfer algorithm.
   * `fast_transfer` module - contains implementations of pretrained style transfer models (train code and logs available in [notebook](notebooks/[dls_project]training.ipynb)).
+  * `gan_transfer` module - contains implementaions of transfer style GANs (train code and logs available in [notebook](notebooks/[dls]monet_gan_train.ipynb)).
 
 The bot is written using the aiogram asynchronous library.
 The bot contains handlers for arriving at the input of images.
@@ -124,11 +125,14 @@ for install linters hooks.
 <a name="runtime"><h3>Runtime examples:</h3></a>
 ![изображение](https://user-images.githubusercontent.com/64536258/215319150-660e8efd-efd4-4226-9047-a190880682ea.png)
 ![изображение](https://user-images.githubusercontent.com/64536258/215319727-9090f25a-e9c8-43db-b23f-f75c6c5c00c0.png)
+![изображение](https://user-images.githubusercontent.com/64536258/215327099-7c135420-fc06-4350-aa9c-e41b213ae865.png)
 
 
 
 ## Links
-[Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://arxiv.org/pdf/1603.08155.pdf)
+* [Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://arxiv.org/pdf/1603.08155.pdf)
+* [CycleGAN | Github/junyanz | Torch implementation for learning an image-to-image translation without input-output pairs](https://github.com/junyanz/CycleGAN)
+* [PyTorch-GAN | Github/eriklindernoren | Collection of PyTorch implementations of GAN](https://github.com/sw-song/PyTorch-GAN)
 
 ## Contacts ☎️:
 
