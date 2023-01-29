@@ -127,3 +127,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/TransferBot/bot/secret.py
+/_cache.pkl

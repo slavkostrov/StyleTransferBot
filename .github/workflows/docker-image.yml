@@ -1,0 +1,19 @@
+name: Docker Image CI
+
+on: push
+
+env:
+  TG_STYLE_BOT_TOKEN: TEST
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - name: Build the stack
+        run: docker-compose up -d
