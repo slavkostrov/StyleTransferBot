@@ -238,7 +238,10 @@ class TransferBot:
             if model.train_image_path is None:
                 continue
             media.attach_photo(InputFile(model.train_image_path))
-            description.append(f"{i}\. {model_id} \- {model.description}\n")
+            current_description = f"{i}\. {model_id}"
+            if model.description is not None:
+                current_description += f" \- {model.description}\n"
+            description.append(current_description)
         description = "".join(description)
         result_help_message = help_message.format(
             description=description, own_style_message=own_style_message
