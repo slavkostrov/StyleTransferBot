@@ -231,7 +231,7 @@ class TransferBot:
     @staticmethod
     async def help_handler(message: types.Message) -> tp.NoReturn:
         """Send help message to user."""
-        LOGGER.info(f"Sending welcome message to {message.chat.id}.")
+        LOGGER.info(f"Sending help message to {message.chat.id}.")
         media = types.MediaGroup()
         description = []
         for i, (model_id, model) in enumerate(MODEL_REGISTRY.items(), start=1):
