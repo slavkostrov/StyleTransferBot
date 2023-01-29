@@ -24,7 +24,7 @@ Package structure:
   * `TransferBot` - main class of bot implementation, encapsulate `aiogram` bot class, setup handlers etc.
 * `model` package:
   * `slow_transfer` module - contains implementations of slow style transfer algorithm.
-  * `fast_transfer` module - contains implementations of pretrained style transfer models.
+  * `fast_transfer` module - contains implementations of pretrained style transfer models (train code and logs available in [notebook](notebooks/[dls_project]training.ipynb)).
 
 The bot is written using the aiogram asynchronous library.
 The bot contains handlers for arriving at the input of images.
