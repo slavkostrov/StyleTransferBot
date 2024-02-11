@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "transferbot"
+name = "TransferBot"
 version = "0.1.0"
 description = ""
 authors = ["Vyacheslav Kostrov <slavkostrov@gmail.com>"]
@@ -45,6 +45,8 @@ typing-extensions = "4.4.0"
 urllib3 = "1.26.13"
 wheel = "0.36.2"
 yarl = "1.8.2"
+trio = "^0.24.0"
+anyio = "^4.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -53,6 +55,7 @@ pytest = "7.2.1"
 flake8 = "^7.0.0"
 ruff = "^0.2.1"
 pre-commit = "^3.6.1"
+aiogram-unittest = "^0.0.1"
 
 [build-system]
 requires = ["poetry-core"]

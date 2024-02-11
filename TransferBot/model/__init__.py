@@ -3,6 +3,7 @@ import typing as tp
 from inspect import isabstract
 
 from .protocol import ModelABC
+from .slow_transfer import VGG19Transfer
 
 MODEL_REGISTRY: tp.Dict[str, tp.Type[ModelABC]] = {
     value.model_id: value
