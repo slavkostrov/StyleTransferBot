@@ -20,7 +20,19 @@ from aiogram.types.input_file import InputFile
 from aiogram.utils.callback_data import CallbackData
 
 from ..model import MODEL_REGISTRY, ModelABC, VGG19Transfer
-from .bot_answers import welcome_message, reply_with_style_message, choose_model_message, choose_style_message, error_message, result_message, queue_position_message, processing_message, own_style_message, unknown_message, help_message
+from .bot_answers import (
+    choose_model_message,
+    choose_style_message,
+    error_message,
+    help_message,
+    own_style_message,
+    processing_message,
+    queue_position_message,
+    reply_with_style_message,
+    result_message,
+    unknown_message,
+    welcome_message,
+)
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = getLogger("transfer_bot.py")
