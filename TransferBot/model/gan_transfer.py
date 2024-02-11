@@ -18,7 +18,7 @@ device = torch.device("cpu") if not torch.cuda.is_available() else torch.device(
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_features):
-        super(ResidualBlock, self).__init__()
+        super().__init__()
 
         self.block = nn.Sequential(
             nn.ReflectionPad2d(1),
@@ -36,7 +36,7 @@ class ResidualBlock(nn.Module):
 
 class GeneratorResNet(nn.Module):
     def __init__(self):
-        super(GeneratorResNet, self).__init__()
+        super().__init__()
 
         channels = input_shape[0]
         out_features = 64

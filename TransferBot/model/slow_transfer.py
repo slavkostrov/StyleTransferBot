@@ -214,11 +214,9 @@ class VGG19Transfer(ModelABC):
 
                 run[0] += 1
                 if run[0] % 50 == 0:
-                    LOGGER.info("run {}:".format(run))
+                    LOGGER.info(f"run {run}:")
                     LOGGER.info(
-                        "Style Loss : {:4f} Content Loss: {:4f}".format(
-                            style_score.item(), content_score.item()
-                        )
+                        f"Style Loss : {style_score.item():4f} Content Loss: {content_score.item():4f}"
                     )
 
                 return style_score + content_score

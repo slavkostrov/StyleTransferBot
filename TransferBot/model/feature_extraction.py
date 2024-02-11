@@ -4,14 +4,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
-from .modules import Normalization, StyleLoss, ContentLoss
+from .modules import ContentLoss, Normalization, StyleLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class ResidualBlock(torch.nn.Module):
     def __init__(self, channels):
-        super(ResidualBlock, self).__init__()
+        super().__init__()
         self.block = nn.Sequential(
             ConvBlock(
                 channels, channels, kernel_size=3, stride=1, normalize=True, relu=True
@@ -36,7 +36,7 @@ class ConvBlock(torch.nn.Module):
         normalize=True,
         relu=True,
     ):
-        super(ConvBlock, self).__init__()
+        super().__init__()
         self.upsample = upsample
         self.block = nn.Sequential(
             nn.ReflectionPad2d(kernel_size // 2),
@@ -58,7 +58,7 @@ class ConvBlock(torch.nn.Module):
 
 class TransformerNet(torch.nn.Module):
     def __init__(self):
-        super(TransformerNet, self).__init__()
+        super().__init__()
         self.model = nn.Sequential(
             ConvBlock(3, 32, kernel_size=9, stride=1),
             ConvBlock(32, 64, kernel_size=3, stride=2),
@@ -79,7 +79,7 @@ class TransformerNet(torch.nn.Module):
 
 class Vgg16(torch.nn.Module):
     def __init__(self):
-        super(Vgg16, self).__init__()
+        super().__init__()
 
         vgg_pretrained_features = models.vgg16(pretrained=True).features
 
@@ -119,17 +119,17 @@ def get_style_model_and_losses(
     for layer in cnn.children():
         if isinstance(layer, nn.Conv2d):
             i += 1
-            name = "conv_{}".format(i)
+            name = f"conv_{i}"
         elif isinstance(layer, nn.ReLU):
-            name = "relu_{}".format(i)
+            name = f"relu_{i}"
             layer = nn.ReLU(inplace=False)
         elif isinstance(layer, nn.MaxPool2d):
-            name = "pool_{}".format(i)
+            name = f"pool_{i}"
         elif isinstance(layer, nn.BatchNorm2d):
-            name = "bn_{}".format(i)
+            name = f"bn_{i}"
         else:
             raise RuntimeError(
-                "Unrecognized layer: {}".format(layer.__class__.__name__)
+                f"Unrecognized layer: {layer.__class__.__name__}"
             )
 
         model.add_module(name, layer)
@@ -138,14 +138,14 @@ def get_style_model_and_losses(
             # add content loss:
             target = model(content_img.to(device)).detach()
             content_loss = ContentLoss(target)
-            model.add_module("content_loss_{}".format(i), content_loss)
+            model.add_module(f"content_loss_{i}", content_loss)
             content_losses.append(content_loss)
 
         if name in ["conv_1", "conv_2", "conv_3", "conv_4", "conv_5"]:
             # add style loss:
             target_feature = model(style_img.to(device)).detach()
             style_loss = StyleLoss(target_feature)
-            model.add_module("style_loss_{}".format(i), style_loss)
+            model.add_module(f"style_loss_{i}", style_loss)
             style_losses.append(style_loss)
 
     for i in range(len(model) - 1, -1, -1):

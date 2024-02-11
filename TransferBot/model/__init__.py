@@ -2,11 +2,7 @@
 import typing as tp
 from inspect import isabstract
 
-from . import feature_extraction
 from .protocol import ModelABC
-from .fast_transfer import KandinskyModel, MonetModel, MunkModel, VanGoghModel
-from .gan_transfer import MonetGAN
-from .slow_transfer import VGG16Transfer, VGG19Transfer
 
 MODEL_REGISTRY: tp.Dict[str, tp.Type[ModelABC]] = {
     value.model_id: value
