@@ -1,16 +1,19 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-    -   id: trailing-whitespace
+    -   id: check-yaml
+    -   id: check-toml
     -   id: end-of-file-fixer
--   repo: https://github.com/psf/black
-    rev: 22.12.0
+    -   id: trailing-whitespace
+    -   id: check-added-large-files
+    -   id: detect-aws-credentials
+    -   id: detect-private-key
+    -   id: check-merge-conflict
+    -   id: check-ast
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.13
     hooks:
-    -   id: black
-        files: "\\.(py)$"
--   repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-    -   id: isort
-        files: "\\.(py)$"
+      - id: ruff
+        types_or: [python, pyi, jupyter]
+        args: [--fix, --exit-non-zero-on-fix, --exclude, ./pyproject.toml]
