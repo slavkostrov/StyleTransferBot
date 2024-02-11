@@ -6,8 +6,7 @@ import pytest
 import torch
 from PIL import Image
 
-from TransferBot.bot import TransferBot
-from TransferBot.bot import bot_answers
+from TransferBot.bot import TransferBot, bot_answers
 from TransferBot.model import MODEL_REGISTRY, VGG19Transfer
 from TransferBot.model.protocol import resize_image
 
