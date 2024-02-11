@@ -1006,17 +1006,6 @@ docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-inline
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
-name = "pip"
-version = "21.1.2"
-description = "The PyPA recommended tool for installing Python packages."
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "pip-21.1.2-py3-none-any.whl", hash = "sha256:f8ea1baa693b61c8ad1c1d8715e59ab2b93cd3c4769bacab84afcc4279e7a70e"},
-    {file = "pip-21.1.2.tar.gz", hash = "sha256:eb5df6b9ab0af50fe1098a52fd439b04730b6e066887ff7497357b9ebd19f79b"},
-]
-
-[[package]]
 name = "platformdirs"
 version = "4.2.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
@@ -1448,4 +1437,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "43ec8a90560be825f7fdef09fe29e6844dcc5ff611627aada49dddbbeb1d5bb1"
+content-hash = "732edd82a3d275c3ea3b70a9591ae522e35962fe84277075e2e8491ea3ecdf19"
