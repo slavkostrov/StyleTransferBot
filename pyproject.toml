@@ -60,11 +60,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 120
-extend-select = [
-  "E",
+lint.extend-select = [
   "E501",
   "UP",  # pyupgrade
-  "D",   # pydocstyle
   "I",   # isort
 ]
 extend-include = ["*.ipynb"]
