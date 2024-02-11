@@ -1,6 +1,6 @@
 import os
 
-from TransferBot.bot import TransferBot
+from transferbot.bot import TransferBot
 
 if __name__ == "__main__":
     token = os.getenv("TG_STYLE_BOT_TOKEN")

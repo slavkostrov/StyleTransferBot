@@ -4,6 +4,7 @@ from inspect import isabstract
 
 from .protocol import ModelABC
 from .slow_transfer import VGG19Transfer
+from .fast_transfer import *
 
 MODEL_REGISTRY: tp.Dict[str, tp.Type[ModelABC]] = {
     value.model_id: value

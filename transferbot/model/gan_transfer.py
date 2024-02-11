@@ -9,7 +9,7 @@ from torch import nn
 from torchvision import transforms
 from torchvision.transforms import Compose
 
-from TransferBot.model import ModelABC
+from transferbot.model import ModelABC
 
 input_shape = (3, 512, 512)
 num_residual_block = 9

@@ -6,9 +6,9 @@ import pytest
 import torch
 from PIL import Image
 
-from TransferBot.bot import TransferBot, bot_answers
-from TransferBot.model import MODEL_REGISTRY, VGG19Transfer
-from TransferBot.model.protocol import resize_image
+from transferbot.bot import TransferBot, bot_answers
+from transferbot.model import MODEL_REGISTRY, VGG19Transfer
+from transferbot.model.protocol import resize_image
 
 test_data_path = Path(__file__).parent / "test_data"
 
