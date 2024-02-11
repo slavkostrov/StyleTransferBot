@@ -65,5 +65,5 @@ lint.extend-select = [
   "UP",  # pyupgrade
   "I",   # isort
 ]
-extend-include = ["*.ipynb"]
+# extend-include = ["*.ipynb"]
 extend-exclude = ["tests"]
