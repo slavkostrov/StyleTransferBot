@@ -1,6 +1,6 @@
 # StyleTransferBot 🖼️
 
-You can enjoy bot here - [@ThroughTheEyesOfArtistsBot](https://t.me/ThroughTheEyesOfArtistsBot) (deployed on Yandex.Cloud, upd: stopped February 19)
+You can enjoy bot here - [@ThroughTheEyesOfArtistsBot](https://t.me/ThroughTheEyesOfArtistsBot) 
 
 * [Description](#description)
 * [Install](#install)
