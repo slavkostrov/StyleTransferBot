@@ -47,10 +47,8 @@ jobs:
           key: venv-${{ hashFiles('poetry.lock') }}
       - name: Install the project dependencies
         run: poetry install
-      - name: Run tests
-        run: poetry run pytest -v tests/test_bot.py
       - name: Test coverage (Total)
-        run: poetry run pytest --cov=transferbot --cov-fail-under=90 tests/
+        run: poetry run pytest --cov=transferbot tests/
       - name: Test coverage (Handlers)
         run: poetry run pytest --junitxml=pytest.xml --cov=transferbot/bot/ --cov-fail-under=90 tests/test_bot.py | tee pytest-coverage.txt
       - name: Pytest coverage comment
