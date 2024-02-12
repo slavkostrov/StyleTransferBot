@@ -51,8 +51,3 @@ jobs:
         run: poetry run pytest --cov=transferbot tests/
       - name: Test coverage (Handlers)
         run: poetry run pytest --junitxml=pytest.xml --cov=transferbot/bot/ --cov-fail-under=90 tests/test_bot.py | tee pytest-coverage.txt
-      - name: Pytest coverage comment
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-coverage-path: ./pytest-coverage.txt
-          junitxml-path: ./pytest.xml
