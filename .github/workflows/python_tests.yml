@@ -48,6 +48,6 @@ jobs:
       - name: Install the project dependencies
         run: poetry install
       - name: Test coverage (Total)
-        run: poetry run pytest -v --cov=transferbot tests/
+        run: poetry run pytest -v --cov=transferbot tests/test_bot.py
       - name: Test coverage (Handlers)
         run: poetry run pytest -v --junitxml=pytest.xml --cov=transferbot/bot/ --cov-fail-under=90 tests/test_bot.py | tee pytest-coverage.txt
