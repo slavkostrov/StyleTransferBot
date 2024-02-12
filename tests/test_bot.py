@@ -1,15 +1,13 @@
-import sys
-sys.path.append(".")
-
 from typing import Iterator
-from transferbot.bot.transfer_bot import TransferBot
-from transferbot.model import MODEL_REGISTRY
-from unittest.mock import AsyncMock, patch, MagicMock
-from aiogram.types import Message, Chat, MediaGroup, PhotoSize, CallbackQuery, User
-from aiogram.dispatcher.filters.factory import FiltersFactory
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from aiogram.types import CallbackQuery, Chat, MediaGroup, Message, PhotoSize, User
+from PIL import Image
+
+from transferbot.bot.transfer_bot import TransferBot
+from transferbot.model import MODEL_REGISTRY
 
 DEFAULT_MODELS_NUMBER = 3
 DEFAULT_MESSAGE_USER_ID = 123
@@ -25,14 +23,13 @@ def default_session_fixture() -> Iterator[None]:
     ):
         bot_mock.return_value = AsyncMock()
         
-        from PIL import Image
-        def foo(arg, *args, **kwargs):
+        def download_image_mock(arg, *args, **kwargs):
             image = Image.new("RGB", (300, 50))
             image.save(arg, 'PNG')
         
         bot_mock.return_value.get_file.return_value = AsyncMock()
         bot_mock.return_value.edit_message_text.return_value = AsyncMock()
-        bot_mock.return_value.get_file.return_value.download.side_effect = foo
+        bot_mock.return_value.get_file.return_value.download.side_effect = download_image_mock
         bot_mock.return_value.edit_message_text.return_value.message_id = DEFAULT_MESSAGE_USER_ID
 
         yield (
@@ -180,7 +177,11 @@ async def test_bot_can_process_content_photo_correctly(bot, message_mock, model_
     
     await actual_handler(message_mock)
     
-    callback_query_mock = get_callback_query_mock(model_id=model_id, user_id=DEFAULT_MESSAGE_USER_ID, message_id=DEFAULT_MESSAGE_USER_ID)
+    callback_query_mock = get_callback_query_mock(
+        model_id=model_id,
+        user_id=DEFAULT_MESSAGE_USER_ID,
+        message_id=DEFAULT_MESSAGE_USER_ID,
+    )
     await bot.process_model_selection(callback_query_mock)
     
     # TODO:
@@ -202,3 +203,4 @@ async def test_bot_can_process_content_photo_correctly(bot, message_mock, model_
 # TODO: добавить проверки очереди (проверять кол-во дочерних процессов?)
 # TODO: отформотировать код
 # TODO: подумать над резолвом фильтров
+# TODO: добавить докстринги
