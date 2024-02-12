@@ -20,7 +20,7 @@ RUN mkdir -p /codebase /storage
 WORKDIR /codebase
 
 COPY setup.py /codebase/setup.py
-COPY TransferBot /codebase/TransferBot
+COPY transferbot /codebase/transferbot
 COPY run.py /codebase/run.py
 
 RUN pip3 install -e /codebase

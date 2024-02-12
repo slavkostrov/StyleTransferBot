@@ -189,7 +189,6 @@ async def test_bot_can_process_content_photo_correctly(bot, message_mock, model_
     if model_id == "Your style":
         from copy import deepcopy
         message_mock.reply_to_message = deepcopy(message_mock)
-        # from pdb import set_trace; set_trace()
         expected_handler = TransferBot.process_style_photo
         actual_handler = await get_relevant_message_handler(bot, message_mock)
         assert expected_handler.__name__ is actual_handler.__name__, (
