@@ -69,5 +69,8 @@ lint.extend-select = [
   "UP",  # pyupgrade
   "I",   # isort
 ]
-# extend-include = ["*.ipynb"]
+lint.exclude = ["I001"]
 extend-exclude = ["tests"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["I001"]

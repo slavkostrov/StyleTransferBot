@@ -2,8 +2,8 @@
 import typing as tp
 from inspect import isabstract
 
-from .fast_transfer import *  # noqa: F403
 from .protocol import ModelABC
+from .fast_transfer import *  # noqa: F403
 from .slow_transfer import VGG19Transfer  # noqa: F401
 
 MODEL_REGISTRY: tp.Dict[str, tp.Type[ModelABC]] = {
