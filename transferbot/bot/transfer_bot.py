@@ -121,6 +121,7 @@ class Request:
         LOGGER.info(
             f"pop from cache with key ({chat_id}, {message_id}) (cache size - {len(_CACHE) - 1})."
         )
+        # TODO: для тестов тут get или генерить разные message_id
         return _CACHE.pop((str(chat_id), str(message_id)))
 
     @staticmethod

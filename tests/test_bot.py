@@ -1,4 +1,7 @@
+# import sys
+# sys.path.append("/home/slava/hse-mlds/subjects/python-advanced/homeworks/tests/")
 from typing import Iterator
+import random
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,13 +12,27 @@ from PIL import Image
 from transferbot.bot.transfer_bot import TransferBot
 from transferbot.model import MODEL_REGISTRY
 
+DEFAULT_STYLE_REPLY_MESSAGE_ID = 123
 DEFAULT_MODELS_NUMBER = 3
-DEFAULT_MESSAGE_USER_ID = 123
+DEFAULT_USER_ID = 123
 
 pytestmark = pytest.mark.asyncio
 
 @pytest.fixture(scope="session", autouse=True)
 def default_session_fixture() -> Iterator[None]:
+    """Создаёт глобальный Mock внешних зависимостей aiogram.
+    
+    Создаёт Mock-объекты для:
+        * aiogram.Bot
+        * aiogram.Dispatcher
+        * aiogram.executor
+        
+    Дополнительно добавляется Mock для скачивания фото - записывается генерируемое 
+    с помощью PIL изображение. В дочерних Mock объектах выставляется message_id.
+    
+    Таким образом, достигается возможноть тестировния объекта TransferBot без использования
+    вннешниъ aiogram зависимостей, требующих подключение к интернету, токен и так далее.
+    """
     with (
         patch("transferbot.bot.transfer_bot.Bot") as bot_mock,
         patch("transferbot.bot.transfer_bot.Dispatcher") as dispatcher_mock,
@@ -30,7 +47,10 @@ def default_session_fixture() -> Iterator[None]:
         bot_mock.return_value.get_file.return_value = AsyncMock()
         bot_mock.return_value.edit_message_text.return_value = AsyncMock()
         bot_mock.return_value.get_file.return_value.download.side_effect = download_image_mock
-        bot_mock.return_value.edit_message_text.return_value.message_id = DEFAULT_MESSAGE_USER_ID
+        
+        # TODO: можно ставить рандомное и внутри теста вытягивать какое получилось
+        # для проверки очередей фигачить в цикле измнение этого значения
+        bot_mock.return_value.edit_message_text.return_value.message_id = DEFAULT_STYLE_REPLY_MESSAGE_ID
 
         yield (
             bot_mock, 
@@ -38,13 +58,23 @@ def default_session_fixture() -> Iterator[None]:
             executor_mock,
         )
      
-@pytest.fixture(scope="function")   
-def message_mock():
-    message = Message(message_id=DEFAULT_MESSAGE_USER_ID, chat=Chat(id=DEFAULT_MESSAGE_USER_ID))
+def get_message_mock(**extras) -> Message:
+    """Создаёт объект типа aiogram.types.Message и Mock'ает метод reply."""
+    default_kwargs = dict(
+        message_id=random.randint(1, 1_000_000),
+        chat=Chat(id=DEFAULT_USER_ID),
+    )
+    kwargs = {
+        **default_kwargs,
+        **extras,
+    }
+    message = Message(**kwargs)
     message.reply = AsyncMock()
     return message
 
-def get_callback_query_mock(model_id, user_id, message_id):
+
+def get_callback_query_mock(model_id: str, user_id: int, message_id: int):
+    """Создаёт объект типа aiogram.types.CallbackQuery."""
     query = CallbackQuery(
         message=Message(message_id=message_id, user_id=user_id),
         data=f":{model_id}:{message_id}",
@@ -52,10 +82,15 @@ def get_callback_query_mock(model_id, user_id, message_id):
     query.from_user = User(id=user_id)
     return query
 
+
 @pytest_asyncio.fixture()
 async def bot():
+    """Фикстура, которая создаёт объект TransferBot, при старте вызывает метод on_startup,
+    а при выключении вызывает метод on_shutdown.
+    """
     bot = TransferBot(bot_token="TEST_TOKEN", slow_transfer_iters=10)
     await bot.on_startup()
+    bot.run()
     yield bot
     await bot.on_shutdown()
 
@@ -109,8 +144,8 @@ async def test_bot_create_aiogram_instances_correctly(bot):
         "there is no setup callback handlers calls inside bot init."
     )
 
-async def test_bot_can_answer_on_start_command(bot, message_mock):
-    message_mock.text = "start"
+async def test_bot_can_answer_on_start_command(bot):
+    message_mock = get_message_mock(text="start")
     
     expected_handler = TransferBot.send_welcome
     actual_handler = await get_relevant_message_handler(bot, message_mock)
@@ -124,8 +159,8 @@ async def test_bot_can_answer_on_start_command(bot, message_mock):
         "`Hi` not found in welcome message."
     )
 
-async def test_bot_can_return_help_message_with_models_info(bot, message_mock):
-    message_mock.text = "help"
+async def test_bot_can_return_help_message_with_models_info(bot):
+    message_mock = get_message_mock(text="help")
     
     expected_handler = TransferBot.help_handler
     actual_handler = await get_relevant_message_handler(bot, message_mock)
@@ -150,8 +185,8 @@ async def test_bot_can_return_help_message_with_models_info(bot, message_mock):
     )
 
 
-async def test_bot_can_handle_unknown_messages(bot, message_mock):
-    message_mock.text = "UNKNOWN_TEXT"
+async def test_bot_can_handle_unknown_messages(bot):
+    message_mock = get_message_mock(text="UNKNOWN_TEXT")
     
     expected_handler = TransferBot.unknown_handler
     actual_handler = await get_relevant_message_handler(bot, message_mock)
@@ -161,13 +196,15 @@ async def test_bot_can_handle_unknown_messages(bot, message_mock):
     
     await actual_handler(message_mock)
     message_mock.reply.assert_called_once()
+    # TODO: use called with?
     assert "end an image or use the commands" in message_mock.reply.call_args_list[0].args[0], (
         "incorrect answer to unknown message."
     )
 
 @pytest.mark.parametrize("model_id", [*MODEL_REGISTRY.keys(), "Your style"])
-async def test_bot_can_process_content_photo_correctly(bot, message_mock, model_id):
-    message_mock.photo = [PhotoSize(file_id=DEFAULT_MESSAGE_USER_ID)]
+async def test_bot_can_process_content_photo_correctly(bot, model_id):
+    message_mock = get_message_mock(photo=[PhotoSize(file_id=DEFAULT_USER_ID)])
+    bot.bot.return_value.edit_message_text.return_value.message_id = message_mock.message_id
     
     expected_handler = TransferBot.process_content_photo
     actual_handler = await get_relevant_message_handler(bot, message_mock)
@@ -179,24 +216,29 @@ async def test_bot_can_process_content_photo_correctly(bot, message_mock, model_
     
     callback_query_mock = get_callback_query_mock(
         model_id=model_id,
-        user_id=DEFAULT_MESSAGE_USER_ID,
-        message_id=DEFAULT_MESSAGE_USER_ID,
+        user_id=DEFAULT_USER_ID,
+        message_id=message_mock.message_id,
     )
+
     await bot.process_model_selection(callback_query_mock)
     
     # TODO:
     # Add asserts
     if model_id == "Your style":
-        from copy import deepcopy
-        message_mock.reply_to_message = deepcopy(message_mock)
+        message_mock.reply_to_message = get_message_mock(message_id=DEFAULT_STYLE_REPLY_MESSAGE_ID)
         expected_handler = TransferBot.process_style_photo
         actual_handler = await get_relevant_message_handler(bot, message_mock)
         assert expected_handler.__name__ is actual_handler.__name__, (
             f"expected style photo handler is different, got {actual_handler}."
         )
         await actual_handler(message_mock)
+        
+        # тест очередей
+        # import asyncio
+        # await asyncio.gather(*[actual_handler(message_mock) for i in range(10)])
 
 
+# TODO: message с разными рандомными id
 # TODO: добавить ассерты
 # TODO: разделить your style и не your style в разные тесты
 # TODO: добавить проверки очереди (проверять кол-во дочерних процессов?)
