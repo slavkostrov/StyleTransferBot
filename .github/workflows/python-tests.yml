@@ -25,7 +25,7 @@ jobs:
       - name: Install the project dependencies
         run: poetry install --only dev
       - name: Check with flake8
-        run: poetry run flake8 --max-line-length=121 --ignore=W605,F401 transferbot/
+        run: poetry run flake8 --max-line-length=121 --ignore=W605,W503,F401 transferbot/
       - name: Check with ruff
         run: poetry run ruff --output-format=github --config ./pyproject.toml .
   tests:
