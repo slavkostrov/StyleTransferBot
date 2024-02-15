@@ -1,6 +1,19 @@
 name: Python tests
 
-on: push
+on:
+  push:
+    branches: ["master", "tests"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 
 jobs:
   lint:
@@ -30,6 +43,9 @@ jobs:
         run: poetry run ruff --output-format=github --config ./pyproject.toml .
   tests:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Python
@@ -52,4 +68,13 @@ jobs:
       - name: Test coverage (Total)
         run: poetry run pytest -v --cov-report term --cov=transferbot tests/test_bot.py
       - name: Test coverage (Handlers)
-        run: poetry run pytest -v --cov-report term --cov=transferbot/bot/ --cov-fail-under=90 tests/test_bot.py
+        run: poetry run pytest -v --cov-report html:cov_html --cov-report term --cov=transferbot/bot/ --cov-fail-under=90 tests/test_bot.py
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './cov_html'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
